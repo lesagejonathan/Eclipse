@@ -5,6 +5,7 @@ from pathos.multiprocessing import ProcessingPool
 import os
 import multiprocessing
 
+
 def NumericalAperture(x,y,L):
 
     x,y = np.meshgrid(x,y)
@@ -35,6 +36,41 @@ def FitRBF(x, f, beta):
     return solve(np.exp(-beta * (x.reshape(-1, 1) -
                                  x.reshape(1, -1))**2), f.reshape(-1, 1))
 
+def KeepDiagonalElements(AScans):
+
+    N = len(AScans)
+
+    A = np.zeros((len(AScans),len(AScans[0][0])))
+
+    for i in range(len(AScans)):
+
+        A[i] = AScan[i][i]
+
+    return A
+
+def EstimateWedgeParameters(AScans,fs,h,cw,angle,p):
+
+    from scipy.signal import hilbert
+
+    A = KeepDiagonalElements(AScans)
+
+    B = np.zeros(len(A))
+
+    for i in range(len(A)):
+
+        h = h + i*p*np.sin(angle*np.pi/180)
+
+        t = int(np.round(fs*2*h/cw))
+
+        w = int(np.round(fs*0.25*h/cw))
+
+        b = np.argmax(np.abs(hilbert(A[i][t-w:t+w]))) + t - w
+
+        B[i] = 0.5*cw*fs*b
+
+    c = np.polyfit(np.array(range(len(A))),B,1)
+
+    return {'Height':c[1], 'Angle':np.arcsin(c[0]/p)*180/mp.pi)
 
 def EstimateProbeDelays(Scans, fsamp, p, h, hfraction=0.1, c=5.92):
 
@@ -67,6 +103,7 @@ def EstimateProbeDelays(Scans, fsamp, p, h, hfraction=0.1, c=5.92):
             Delays[m, n] = indmax / fsamp
 
     return Delays, A.reshape(-1, 1) * A.reshape(1, -1)
+
 
 
 class LinearCapture:
@@ -125,7 +162,6 @@ class LinearCapture:
 
                     self.AScans[i] = self.AScans[i]/norm(self.AScans[i])
 
-
     def SetRectangularGrid(xstart,xend,ystart,end,xres,yres):
 
         Nx = np.floor((xend - xstart)/xres) + 1
@@ -166,9 +202,6 @@ class LinearCapture:
 
         self.Delays = [np.zeros(x.shape) for n in range(self.NumberOfElements)]
 
-
-
-
     def GetWedgeBackWallDelays(self, xrng, yrng, c, Th):
 
         from scipy.optimize import minimize_scalar,minimize
@@ -207,8 +240,6 @@ class LinearCapture:
 
 
         self.Delays =  [self.Delays[n] + np.array([[delays(X,Y,n) for Y in yrng] if condition else 0 for X in xrng]) for n in range(self.NumberOfElements)]
-
-
 
     def GetCurvedSurfaceDelays(self, Radious, Thickness, Offset, c, Convexin = False, Convexout = False):
 
@@ -302,7 +333,6 @@ class LinearCapture:
 
         self.xRange = xm.copy()
         self.yRange = ym.copy()
-
 
     def GetCurvedSurfaceBackwallDelays(self, Radious, Thickness, Offset, c, Convexin = False, Convexout = False):
 
@@ -428,10 +458,6 @@ class LinearCapture:
         self.xRange = xm.copy()
         self.yRange = ym.copy()
 
-
-
-
-
     def ReverseElements(self):
 
         self.AScans = [a[::-1,::-1,:] for a in self.AScans]
@@ -487,8 +513,6 @@ class LinearCapture:
 
         d = self.Pitch * (self.NumberOfElements - 1)
 
-        # d = self.Pitch*self.NumberOfElements
-
         d = np.linspace(-d / 2, d / 2, self.NumberOfElements)
 
         L = self.AScans[ScanIndex].shape[2]
@@ -510,9 +534,6 @@ class LinearCapture:
         Npad = int(np.round(self.SamplingFrequency * np.max(T)))
 
         Lpad = L + Npad - 1
-        # X = rfft(np.concatenate((np.zeros((self.NumberOfElements, self.NumberOfElements, Npadstart)),
-        #                       np.real(self.AScans[ScanIndex]), np.zeros((self.NumberOfElements,
-        # self.NumberOfElements, Npadend))), axis=2), axis=2)
 
         X = rfft(np.real(self.AScans[ScanIndex]), Lpad)
 
@@ -569,11 +590,6 @@ class LinearCapture:
 
         self.yRange = yrng.copy()
 
-    # def GetDelayIndices(self):
-    #
-    #         self.DelayIndices = [[[int(np.round(self.Delays[n][ix][iy]*self.SamplingFrequency)) for iy in range(len(self.Delays[0][0]))] for ix in range(len(self.Delays[0]))] for n in range(len(self.Delays))]
-    #
-
     def GetContactCorrections(self, x,y,amplitude,sensitivity=None, isongrid=False):
 
         from scipy.interpolate import griddata
@@ -619,9 +635,6 @@ class LinearCapture:
             A[:,ind[-1]::]=A[:,ind[-1]].reshape((-1,1))
 
             self.AmplitudeCorrection.append(A)
-
-
-
 
     def GetWedgeDelays(self, xrng, yrng, c):
 
