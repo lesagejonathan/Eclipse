@@ -162,7 +162,7 @@ class LinearCapture:
 
                     self.AScans[i] = self.AScans[i]/norm(self.AScans[i])
 
-    def SetRectangularGrid(xstart,xend,ystart,end,xres,yres):
+    def SetRectangularGrid(xstart,xend,ystart,end,xres,yres,Offset=None):
 
         Nx = np.floor((xend - xstart)/xres) + 1
         Ny = np.floor((yend - ystart)/yres) + 1
@@ -170,9 +170,17 @@ class LinearCapture:
         x = np.linspace(xstart,send,Nx)
         y = np.linspace(ystart,send,Ny)
 
-        x,y = np.meshgrid(x,y)
+        # x,y = np.meshgrid(x,y)
 
-        self.xRange = x
+        if Offset is None:
+
+            self.xRange = x
+
+        else:
+
+            self.xRange = x + Offset
+
+
         self.yRange = y
 
         self.Delays = [np.zeros(x.shape) for n in range(self.NumberOfElements)]
@@ -636,7 +644,8 @@ class LinearCapture:
 
             self.AmplitudeCorrection.append(A)
 
-    def GetWedgeDelays(self, xrng, yrng, c):
+    # def GetWedgeDelays(self, xrng, yrng, c):
+    def GetWedgeDelays(self, c):
 
         from scipy.optimize import minimize_scalar,minimize
         # from scipy.optimize import brentq
@@ -648,28 +657,6 @@ class LinearCapture:
 
         cphi = np.cos(self.WedgeParameters['Angle'] * np.pi / 180.)
         sphi = np.sin(self.WedgeParameters['Angle'] * np.pi / 180.)
-
-        # x,y = np.meshgrid(xrng,yrng)
-
-
-        # def f(x,X,Y,n):
-        #
-        #     return np.sqrt((h + n * p * sphi)**2 + (cphi * n * p - x)**2) / cw + np.sqrt(Y**2 + (X - x)**2) / c
-        # #
-        # def J(x,X,Y,n):
-        #     return -(cphi * n * p - x) / (cw * np.sqrt((h + n * p * sphi)**2 + (cphi * n * p - x)**2)) - \
-        #             (X - x) / (c * np.sqrt(Y**2 + (X - x)**2))
-
-
-        # def f(x,X,Y,n):
-        #
-        #     return (x - cphi*n*p)*(c * np.sqrt(Y**2 + (X - x)**2))/(cw * np.sqrt((h + n * p * sphi)**2 + (x - cphi*n*p)**2)) - (X - x)
-
-
-        # self.Delays = [np.array([[minimize(f,x0=0.5 * np.abs(x - n * self.Pitch * cphi),
-        #                 args=(x,y,n),method='BFGS',jac=J).fun for y in yrng] for x in xrng])
-        #                for n in range(self.NumberOfElements)]
-
 
         def f(X,Y,n):
 
@@ -697,51 +684,18 @@ class LinearCapture:
                 return np.nan
 
 
-        x,y = np.meshgrid(xrng,yrng)
+        # x,y = np.meshgrid(xrng,yrng)
 
         ComputeDelays = np.vectorize(f,excluded=['n'])
 
-        self.Delays = [ComputeDelays(x,y,n) for n in range(self.NumberOfElements)]
+        # self.Delays = [ComputeDelays(x,y,n) for n in range(self.NumberOfElements)]
 
+        delays = [ComputeDelays(x,y,n) for n in range(self.NumberOfElements)]
 
-        # ComputeDelays = np.vectorize(f)
+        self.Delays = self.Delays + delays
 
-        # self.Delays = []
-        #
-        # for n in range(self.NumberOfElements):
-        #
-        #     ComputeDelays = np.vectorize(f)
-        #
-        #     self.Delays.append(ComputeDelays(x,y))
-
-
-
-
-
-
-        # def ComputeDelay(n,x,y):
-        #
-        #     try:
-        #         # return brentq(f,n*p*cphi, (x-n*p*cphi)*(h+n*p*sphi)/(y+h+n*p*sphi), args=(x,y,n),xtol=1e-6)
-        #
-        #         # return minimize_scalar(f,(n*p*cphi,(x-n*p*cphi)*(h+n*p*sphi)/(y+h+n*p*sphi)),args = (x,y,n),tol=1e-4,options={'maxiter':30}).x
-        #         # return brentq(f,n*p*cphi, x, args=(x,y,n),xtol=-6)
-        #
-        #         return minimize(f,0.5*(n*p*cphi + (x-n*p*cphi)*(h+n*p*sphi)/(y+h+n*p*sphi)),args=(x,y,n),jac=J,tol=1e-4,options={'maxiter':20}).fun
-        #
-        #
-        #     except ValueError:
-        #
-        #         return np.nan
-
-        # self.Delays = [np.array([[brentq(f, n*p*cphi, (x-n*p*cphi)*(h+n*p*sphi)/(y+h+n*p*sphi), args=(x,y,n)) for x in xrng] for y in yrng]) for n in range(self.NumberOfElements)]
-
-        # self.Delays = [np.array([[ComputeDelay(n,x,y) for y in yrng] for x in xrng]) for n in range(self.NumberOfElements)]
-
-
-
-        self.xRange = xrng.copy()
-        self.yRange = yrng.copy()
+        # self.xRange = xrng.copy()
+        # self.yRange = yrng.copy()
 
     def KeepElements(self, Elements):
 
