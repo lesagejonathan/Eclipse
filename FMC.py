@@ -100,7 +100,7 @@ class LinearCapture:
         GetDelays = {}
         GetDelays['DirectDirect'] = lambda c, offset: (GetWedgeDelays(c[0],key='send',offset[0]),GetWedgeDelays(c[1],key='rec',offset[1]))
         GetDelays['BackwallDirect'] = lambda c,Th,offset: (GetWedgeBackWallDelays((c[0],c[1]),Th,key='send',offset[0]), GetWedgeDelays(c[2],key='rec',offset[1]))
-        GetDelays['BackWallBackWall'] = lambda c,Th,offset: (GetWedgeBackWallDelays((c[0],c[1]),Th,key='send',offset[0]),GetWedgeBackWallDelays((c[2],c[3]),Th,key='rec',offset[1]))
+        GetDelays['BackwallBackwall'] = lambda c,Th,offset: (GetWedgeBackWallDelays((c[0],c[1]),Th,key='send',offset[0]),GetWedgeBackWallDelays((c[2],c[3]),Th,key='rec',offset[1]))
         self.GetDelays = GetDelays
 
 
@@ -511,9 +511,6 @@ class LinearCapture:
         if c is None:
 
             c = self.Velocity
-
-        # self.Delays = [[[np.sqrt((x - n * self.Pitch)**2 + y**2) / c for y in yrng]
-        #                 for x in xrng] for n in range(self.NumberOfElements)]
 
         xn = np.linspace(-(self.NumberOfElements-1)*self.Pitch*0.5, (self.NumberOfElements-1)*self.Pitch*0.5, self.NumberOfElements)
 
