@@ -162,7 +162,7 @@ class LinearCapture:
 
                     self.AScans[i] = self.AScans[i]/norm(self.AScans[i])
 
-    def SetRectangularGrid(xstart,xend,ystart,end,xres,yres,Offset=None):
+    def SetRectangularGrid(xstart,xend,ystart,yend,xres,yres,Offset=None):
 
         Nx = np.floor((xend - xstart)/xres) + 1
         Ny = np.floor((yend - ystart)/yres) + 1
