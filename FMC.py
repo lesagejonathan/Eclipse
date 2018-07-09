@@ -878,7 +878,7 @@ class LinearCapture:
 
         return h
 
-    def GetAdaptiveDelays(self, ScanIndex, xrng, yrng, cw, cs):
+    def GetAdaptiveDelays(self, ScanIndex, xrng, yrng, cw, cs, Lw=10):
 
         # def GetAdaptiveDelays(self, xrng, yrng, h, dhdx, cw, cs,
         # AsParallel=False):
@@ -886,6 +886,10 @@ class LinearCapture:
         from scipy.optimize import minimize_scalar, minimize
         from scipy.interpolate import interp1d
         from scipy.signal import convolve
+        from matplotlib.pylab import plot,show
+
+
+        xn = np.linspace(-(self.NumberOfElements-1)*self.Pitch,(self.NumberOfElements-1)*self.Pitch,self.NumberOfElements)
 
         # xrng = np.linspace(0, self.NumberOfElements - 1, self.NumberOfElements) * self.Pitch
 
@@ -895,43 +899,50 @@ class LinearCapture:
 
         dh = yrng[0][1] - yrng[0][0]
 
-        hgrid = np.argmax(np.abs(I), axis=0) * dh + yrng[0][0]
+        hgrid = np.argmax(np.abs(I),axis=0)*dh + yrng[0][0]
 
-        Lw = int(np.round(self.Pitch/(xrng[1]-xrng[0])))
+
 
         w = np.ones(Lw)/Lw
 
+        hgrid = convolve(hgrid,w,mode='same')[int(Lw/2):-int(Lw/2)]
 
-        hgrid = convolve(hgrid,w,mode='same')
 
 
-        h = interp1d(xrng, hgrid, bounds_error=False)
-
+        h = interp1d(xrng[int(Lw/2):-int(Lw/2)], hgrid, bounds_error=False)
 
         def f(x, X, Y, n):
-            return np.sqrt((x - n * self.Pitch)**2 + h(x) ** 2)/cw + np.sqrt((X - x)**2 + (Y - h(x))**2)/cs
+
+            return np.sqrt((x - n * self.Pitch)**2 + (h(x))**2)/cw + np.sqrt((X - x)**2 + (Y - h(x))**2)/cs
 
 
+        def DelayMin(x,y,n):
 
-        # def DelayMin(n):
-        #
-        #     return np.array([[float(minimize_scalar(f,bracket=(n*self.Pitch,x),args=(x,y,n),method='Brent',tol=1e-4,options={'maxiter': 25}).fun) if y >= h(x) else np.nan for y in yrng[1]] for x in xrng]).transpose()
+            if (y < h(x)):
+
+                T = np.nan
+
+            else:
+
+                # T = minimize(f,xn[n],args=(x,y,n),method='BFGS',tol=1e-1,options={'gtol':1e-2,'maxiter':2,'eps':self.Pitch/2}).fun
+
+                T = minimize_scalar(f,(x,xn[n]),args=(x,y,n),tol=1e-2).fun
+
+            return T
 
 
-        def DelayMin(n):
+        DelayMin = np.vectorize(DelayMin ,excluded=['n'])
 
-            return np.array([[np.float(minimize(f,0.5*(x+self.Pitch*n),args=(x,y,n),method='BFGS',tol=1e-2,options={'gtol':1e-3,'maxiter':20,'eps':1e-5}).fun) if y >= h(x) else np.nan for y in yrng[1]] for x in xrng]).transpose()
-
-
+        x,y = np.meshgrid(xrng,yrng[1])
 
 
-        self.Delays = [DelayMin(n) for n in range(self.NumberOfElements)]
+        self.Delays = [DelayMin(x,y,n) for n in range(self.NumberOfElements)]
 
         self.xRange = xrng
 
         self.yRange = yrng
 
-        return hgrid,h
+        # return hgrid,h
 
     def FilterByAngle(self, ScanIndex, filtertype, angle, FWHM, c):
 

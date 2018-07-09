@@ -221,7 +221,7 @@ class AttenuationTomography:
         Gavg = []
         Gexp = []
 
-        B = []
+        # B = []
 
         W = tukey(int(2*windowparams[0]),windowparams[1])
 
@@ -243,7 +243,9 @@ class AttenuationTomography:
         # ygrid = ygrid.reshape(1,-1)
         #
         #
-        # B = np.zeros((int(N**2),xgrid.shape[1]))
+        B = np.zeros((M,int(Nx*Ny)))
+
+        print(B.shape)
 
 
 
@@ -406,15 +408,14 @@ class AttenuationTomography:
 
                     yp = yb(xp)
 
-
                     xy.append([xp, yp])
+
 
                 for q in range(Ny):
 
                     yq = dy*q
 
                     xq = xb(yq)
-
 
                     xy.append([xq,yq])
 
@@ -440,6 +441,9 @@ class AttenuationTomography:
 
                     r = np.sqrt((x1 - x0)**2 + (y1 - y0)**2)
 
+                    print(n + m*(N-m))
+
+                    print(p+q*Nx)
 
                     B[n + m*(N-m), p+q*Nx] = B[n + m*(N-m), p+q*Nx] + r
 
