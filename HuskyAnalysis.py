@@ -2,8 +2,9 @@ import FMC as f
 import numpy as np
 import _pickle as pickle
 from scipy.signal import hilbert
+import itertools
 
-def MeasureThickness(A,fs,N,p,h,angle,cw,cs,Th):
+def MeasureThickness(AScans,fs,N,p,h,angle,cw,cs,Th):
 
     h = h + 0.5*p*(N-1)*np.sin(angle*np.pi/180)
 
@@ -11,11 +12,11 @@ def MeasureThickness(A,fs,N,p,h,angle,cw,cs,Th):
 
     W = int(np.round(fs*0.25*Th/cs))
 
-    b = np.argmax(np.abs(hilbert(A[T-W:T+W]))) + T - W
+    b = np.argmax(np.abs(hilbert(AScans[T-W:T+W]))) + T - W
 
     return 0.5*cs*(fs*b - 2*(h/cw))
 
-def MeasureProbeOffset(A,fs,N,p,h,angle,cw,cs,Th):
+def MeasureProbeOffset(AScans,fs,N,p,h,angle,cw,cs,Th):
 
     phi = angle
 
@@ -25,88 +26,95 @@ def MeasureProbeOffset(A,fs,N,p,h,angle,cw,cs,Th):
 
     W = int(np.round(0.15*T))
 
-    b = np.argmax(np.abs(hilbert(A[T-W:T+W]))) + T - W
+    b = np.argmax(np.abs(hilbert(AScans[T-W:T+W]))) + T - W
 
     L = cs*np.sin(phir)*(0.5*b*fs - (h + 0.5*p*(N-1)*np.sin(phi))/(cw*np.cos(phi)))
 
     return L + np.tan(phi)*(h + 0.5*p*(N-1)*np.sin(phi)) + np.cos(phi)*(0.5*p*(N-1))
 
-## Wedge Parameters needs to be estimated before running the script
-# WP = f.EstimateWedgeParameters(F.AScans[0],fs,h,cw,angle,p))
-#
-# h1 = WP['Height']
-# angle1 = WP['Angle']
+def KeepDiagonalElements(AScans):
 
-WedgeParameter = {'Height':20.,'Velocity': 1.48, 'Angle':21.}
-ProbeParameter = {'NumberofElements': 32, 'Pitch': 0.6}
-PieceInfo = {'Velocity':5.9, 'Thickness': 9.5}
+    N = len(AScans)
 
-N = ProbeParameter['NumberOfElements']
-p = ProbeParameter['Pitch']
+    A = np.zeros((len(AScans),len(AScans[0][0])))
+
+    for i in range(len(AScans)):
+
+        A[i] = AScan[i][i]
+
+    return A
+
+def EstimateWedgeParameters(AScans,fs,h,cw,angle,p):
+
+    from scipy.signal import hilbert
+
+    A = KeepDiagonalElements(AScans)
+
+    B = np.zeros(len(A))
+
+    for i in range(len(A)):
+
+        h = h + i*p*np.sin(angle*np.pi/180)
+
+        t = int(np.round(fs*2*h/cw))
+
+        w = int(np.round(fs*0.25*h/cw))
+
+        b = np.argmax(np.abs(hilbert(A[i][t-w:t+w]))) + t - w
+
+        B[i] = 0.5*cw*fs*b
+
+    c = np.polyfit(np.array(range(len(A))),B,1)
+
+    return {'Height':c[1], 'Angle':np.arcsin(c[0]/p)*180/mp.pi)
+
+fs, cw, T, cs, cl, p, h, angle, N = 25., 1.48, 9.5, 3.24, 5.9, 0.6, 20., 21., 32.
+
+Scans = pickle.load(open('mnt/c/Users/mmarvasti/Desktop','rb'))
+
+WedgeParameter = {'Height':h ,'Velocity': cw, 'Angle':angle}
+
+F = f.LinearCapture(fs,Scans[0],p,N,WedgeParameters=WedgeParameter)
+
+F.KeepElements(range(N))
+
+WP = EstimateWedgeParameters(F.AScans,fs,h,cw,angle,p)
+
+WedgeParameter = {'Height':WP['Height'],'Velocity': cw, 'Angle':WP['Angle']}
 
 h = WedgeParameter['Height']
 angle = WedgeParametr['Angle'] *np.pi/180
 cw = WedgeParameter['Velocity']
-fs = 25.
 
-Th = 9.5
-cs = 3.24
-cl = 5.9
+Th = MeasureThickness(Scans[0],fs,N,p,h,angle,cw,cs,T)
 
-WeldCap = 18
-Haz = 13
+F = F.LinearCapture(fs,Scans[0],p,N,WedgeParameters=WedgeParameter)
+
+del(F)
+
+AScan = F.PlaneWaveSweep(0, 0, (np.array(range(32)),np.array(range(32,64))), cw)
+
+Offset = MeasureProbeOffset(AScan,fs,N,p,h,angle,cw,cs,Th)
+
+WeldCap, Haz = 16, 2
 
 xres = 0.1
 yres = 0.1
 
-xstart = np.round(-0.5*(N-1)*p)
+xstart = -0.5 * (WeldCap + Haz)
 xend = -xstart
 ystart = 0
 yend = -Th
 
-Scans = pickle.load(open('mnt/c/Users/mmarvasti/Desktop','rb'))
+F.SetRectangularGrid(xstart,xend,ystart,yend,xres,yres)
 
-F = f.LinearCapture(fs,p,N,WedgeParameters=WedgeParameter)
+HuskyDelays = {}
 
-Linear90Skew = [F.PlaneWaveSweep(i,-angle1,cw,range(N)) for i in range(len(Scans))]
+c = list(itertools.product([cs,cl],repeat=2))
+HuskyDelays['DirectDirect'] = [(c[i], F.GetDelays['DirectDirect'](c[i],Offset)) for i in range(len(c))]
 
-Th90Skew = np.array([MeasureThickness(Linear90Skew[i],fs,N,p,h1,angle1,cw,cw,Th) for i in range(len(Scans))])
+c = list(itertools.product([cs,cl],repeat=3))
+HuskyDelays['BackWallDirect'] = [(c[i], F.GetDelays['BackwallDirect'](c[i],Th,Offset)) for i in range(len(c))]
 
-Linear270Skew = [F.PlaneWaveSweep(i,-angle,cw,np.flip(range(N:2*N)) for i in range(len(Scans))]
-
-Th270Skew = np.array([MeasureThickness(Linear270Skew[i],fs,N,p,h,angle,cw,cw,Th) for i in range(len(Scans))])
-
-PitchCatchSweep = [F.PlaneWaveSweep(i,-60,cw,np.flip(range(N:2*N)) for i in range(len(Scans))]
-
-SkewOffsets = np.array([MeasureProbeOffset(PitchCatchSweep[i],fs,N,p,h,angle,cw,cs,Th) for in range(len(Scans))])
-
-# DirectDirect shear
-DirectDirectShear = []
-
-for i in range(len(SkewOffsets)):
-
-    F.SetRectangularGrid(xstart,xend,ystart,end,xres,yres,Offset=SkewOffsets[i])
-
-    F.GetWedgeDelays(cs)
-
-    DirectDirectShear.append(self.Delays)
-
-DirectDirectCompression = []
-
-for i in range(len(SkewOffsets)):
-
-    F.SetRectangularGrid(xstart,xend,ystart,end,xres,yres,Offset=SkewOffsets[i])
-
-    F.GetWedgeDelays(cl)
-
-    DirectDirectCompression.append(self.Delays)
-
-BackWallDirect = []
-
-for i in range(len(SkewOffsets)):
-
-    F.SetRectangularGrid(xstart,xend,ystart,end,xres,yres,Offset=SkewOffsets[i])
-
-    F.GetWedgeDelays(cl)
-
-    DirectDirectCompression.append(self.Delays)
+c = list(itertools.product([cs,cl],repeat=4))
+HuskyDelays['BackwallBackwall'] = [(c[i], F.GetDelays['BackwallBackwall'](c[i],Th,Offset)) for i in range(len(c))]
