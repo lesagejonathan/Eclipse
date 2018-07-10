@@ -464,7 +464,8 @@ class LinearCapture:
     def PlaneWaveSweep(self, ScanIndex, Angles, Elements, c):
 
 
-        X = np.real(self.AScans[ScanIndex][Elements[0],Elements[1],:])
+        X = np.real(self.AScans[ScanIndex][Elements[0][0]:Elements[0][-1]+1,Elements[1][0]:Elements[1][-1]+1,:])
+
 
         L = X.shape[2]
 
