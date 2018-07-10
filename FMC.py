@@ -633,12 +633,12 @@ class LinearCapture:
     def GetAdaptiveDelays(self, ScanIndex, xrng, yrng, cw, cs, Lw=10):
 
         from scipy.optimize import minimize_scalar, minimize
-        from scipy.interpolate import interp1d
+        from scipy.interpolate import interp1d,griddata
         from scipy.signal import convolve
         from matplotlib.pylab import plot,show
 
 
-        xn = np.linspace(-(self.NumberOfElements-1)*self.Pitch,(self.NumberOfElements-1)*self.Pitch,self.NumberOfElements)
+        xn = np.linspace(-0.5*(self.NumberOfElements-1)*self.Pitch,0.5*(self.NumberOfElements-1)*self.Pitch,self.NumberOfElements)
 
         self.GetContactDelays(xrng, yrng[0], cw)
 
@@ -648,32 +648,56 @@ class LinearCapture:
 
         hgrid = np.argmax(np.abs(I),axis=0)*dh + yrng[0][0]
 
+        # hgrid = np.interp(xn,xrng,hgrid)
 
+        # hgrid = decimate(hgrid,int(np.round(len(xn)/len(xrng))))
 
         w = np.ones(Lw)/Lw
+
+        xrng = xrng[int(Lw/2):-int(Lw/2)]
 
         hgrid = convolve(hgrid,w,mode='same')[int(Lw/2):-int(Lw/2)]
 
 
-
-        h = interp1d(xrng[int(Lw/2):-int(Lw/2)], hgrid, bounds_error=False)
+        h = interp1d(xrng, hgrid, bounds_error=False)
 
         def f(x, X, Y, n):
 
-            return np.sqrt((x -xn[n])**2 + (h(x))**2)/cw + np.sqrt((X - x)**2 + (Y - h(x))**2)/cs
+            return np.sqrt((x-xn[n])**2 + (h(x))**2)/cw + np.sqrt((X - x)**2 + (Y - h(x))**2)/cs
 
+
+
+        # h = interp1d(xrng, hgrid, bounds_error=False)
+        #
+        #
+        # #
+        # def f(x, X, Y, n):
+        #
+        #     return np.sqrt((x-xn[n])**2 + (h(x))**2)/cw + np.sqrt((X - x)**2 + (Y - h(x))**2)/cs
+        #
 
         def DelayMin(x,y,n):
+
+
 
             if (y < h(x)):
 
                 T = np.nan
 
-            else:
+            elif (xn[n]!=x):
 
                 # T = minimize(f,xn[n],args=(x,y,n),method='BFGS',tol=1e-1,options={'gtol':1e-2,'maxiter':2,'eps':self.Pitch/2}).fun
 
-                T = minimize_scalar(f,(x,xn[n]),args=(x,y,n),tol=1e-2).fun
+                bnds = (min([xn[n],x]),max([xn[n],x]))
+
+
+                T = minimize_scalar(f,bnds,args=(x,y,n),tol=1e-2).fun
+
+
+
+            elif xn[n]==x:
+
+                T = f(x,x,y,n)
 
             return T
 
@@ -687,7 +711,7 @@ class LinearCapture:
 
         self.xRange = xrng
 
-        self.yRange = yrng
+        self.yRange = yrng[1]
 
         # return hgrid,h
 
@@ -779,7 +803,7 @@ class LinearCapture:
                 return I
 
 
-        I = reduce(lambda x,y: x+y, (ElementFocus(m,n) for m in Elements[0] for n in Elements[1])).reshape(int(len(self.xRange)*len(self.yRange)))
+        I = reduce(lambda x,y: x+y, (ElementFocus(m,n) for m in Elements[0] for n in Elements[1])).reshape((len(self.yRange),len(self.xRange)))
 
 
         if Normalize:
