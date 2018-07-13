@@ -168,7 +168,7 @@ HuskyDelays['DirectDirect'] = F.GetDelays['DirectDirect'](c,Offset)
 
 
 # c = list(itertools.product([cs,cl],repeat=2))
-# HuskyDelays['DirectDirect'] = [(c[i], F.GetDelays['DirectDirect'](c[i],Offset)) for i in range(len(c))]
+ HuskyDelays['DirectDirect'] = [(c[i], F.GetDelays['DirectDirect'](c[i],Offset)) for i in range(len(c))]
 #
 # c = list(itertools.product([cs,cl],repeat=3))
 # HuskyDelays['BackWallDirect'] = [(c[i], F.GetDelays['BackwallDirect'](c[i],Th,Offset)) for i in range(len(c))]
