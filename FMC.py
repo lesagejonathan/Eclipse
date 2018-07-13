@@ -494,7 +494,7 @@ class LinearCapture:
             XX = np.sum(XX * np.exp(-2j * np.pi *
                                     T[0] * T[1]), axis=0, keepdims=False)
 
-            x = ifft(XX)
+            x = 2*ifft(XX,2*len(XX))
 
             return x[0:L]
 
@@ -631,17 +631,17 @@ class LinearCapture:
 
         return h
 
-    def GetAdaptiveDelays(self, ScanIndex, xrng, yrng, cw, cs, Lw=10):
+    def GetAdaptiveDelays(self, ScanIndex, xrng, yrng, c, Lw=10):
 
         from scipy.optimize import minimize_scalar, minimize
         from scipy.interpolate import interp1d,griddata
-        from scipy.signal import convolve
+        from scipy.signal import convolve, decimate
         from matplotlib.pylab import plot,show
 
 
         xn = np.linspace(-0.5*(self.NumberOfElements-1)*self.Pitch,0.5*(self.NumberOfElements-1)*self.Pitch,self.NumberOfElements)
 
-        self.GetContactDelays(xrng, yrng[0], cw)
+        self.GetContactDelays(xrng[0], yrng[0], c[0])
 
         I = self.ApplyTFM(ScanIndex)
 
@@ -651,20 +651,18 @@ class LinearCapture:
 
         # hgrid = np.interp(xn,xrng,hgrid)
 
-        # hgrid = decimate(hgrid,int(np.round(len(xn)/len(xrng))))
+        hgrid = decimate(hgrid,Lw)
 
-        w = np.ones(Lw)/Lw
-
-        xrng = xrng[int(Lw/2):-int(Lw/2)]
-
-        hgrid = convolve(hgrid,w,mode='same')[int(Lw/2):-int(Lw/2)]
+        # w = np.ones(Lw)/Lw
+        #
+        # hgrid = convolve(hgrid,w,mode='same')
 
 
-        h = interp1d(xrng, hgrid, bounds_error=False)
+        h = interp1d(xrng[0][0::Lw], hgrid, bounds_error=False)
 
         def f(x, X, Y, n):
 
-            return np.sqrt((x-xn[n])**2 + (h(x))**2)/cw + np.sqrt((X - x)**2 + (Y - h(x))**2)/cs
+            return np.sqrt((x-xn[n])**2 + (h(x))**2)/c[0] + np.sqrt((X - x)**2 + (Y - h(x))**2)/c[1]
 
 
 
@@ -705,12 +703,12 @@ class LinearCapture:
 
         DelayMin = np.vectorize(DelayMin ,excluded=['n'])
 
-        x,y = np.meshgrid(xrng,yrng[1])
+        x,y = np.meshgrid(xrng[1],yrng[1])
 
 
         self.Delays = [DelayMin(x,y,n) for n in range(self.NumberOfElements)]
 
-        self.xRange = xrng
+        self.xRange = xrng[1]
 
         self.yRange = yrng[1]
 
