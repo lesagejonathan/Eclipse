@@ -4,6 +4,26 @@ from numpy.fft import rfft, ifft, fftn, ifftn, fftshift
 import os
 import multiprocessing
 
+
+def DelayCalculation(delaykey,parameters):
+
+    DelayFunction = {}
+
+    def BackwallDirectDelays(parameters):
+
+
+    def DirectDirect(parameters):
+
+
+    DelayFunction['BackwallDirectDelays'] = lambda BackwallDirectDelays(parameters)
+
+
+    return DelayFunction['BackwallDirectDelays']
+
+
+
+
+
 def NumericalAperture(x,y,L):
 
     x,y = np.meshgrid(x,y)
@@ -70,7 +90,7 @@ def EstimateProbeDelays(Scans, fsamp, p, h, hfraction=0.1, c=5.92):
 
 class LinearCapture:
 
-    def __init__(self, fs, scans, p, N, probedelays=None, WedgeParameters=None):
+    def __init__(self, fs, scans, p, N, probedelays=None, WedgeParameters=None, delayfile=None):
 
         import copy
 
@@ -87,6 +107,9 @@ class LinearCapture:
 
             self.ProbeDelays = probedelays
 
+        if delayfile is not None:
+
+
 
         self.AScans = copy.deepcopy(scans)
 
@@ -95,6 +118,17 @@ class LinearCapture:
         self.AmplitudeCorrection = None
 
         self.WedgeParameters = WedgeParameters
+
+
+
+    def ReadDelays(self,delays):
+
+        self.Delays = delays
+
+
+    def GetDelays(self,delaykey,parameters):
+
+        self.Delays = CalculateDelays(delaykey,parameters)
 
     #     GetDelays = {}
     #     GetDelays['DirectDirect'] = lambda c, offset: (GetWedgeDelays(c[0],key='send',offset[0]),GetWedgeDelays(c[1],key='rec',offset[1]))
@@ -118,6 +152,7 @@ class LinearCapture:
     #
     #     self.SendDelays = [np.zeros(x.shape) for n in range(self.NumberOfElements)]
     #     self.RecDelays = [np.zeros(x.shape) for n in range(self.NumberOfElements)]
+
 
     def GetWedgeDelays(self, c, key, Offset = 0):
 
