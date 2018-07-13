@@ -88,7 +88,7 @@ class PeakNDT:
         self.ClearScans()
         self.EncodedScan = False
 
-        self.StepsPerMeasure = (1,1,1,9)
+        self.StepsPerMeasure = [1,1,1,9]
 
         # self.StepsPerMeasure = 1.
         # self.AxisNumber = 4.
@@ -571,7 +571,7 @@ class PeakNDT:
         countstop = self.ReadAxisLocations()[axis]
         # countstop = self.ReadAxisLocations()
 
-        self.StepsPerMeasure[axis] = abs((countstop - countstart)/(stop - start))*10
+        self.StepsPerMeasure[axis] = int(abs((countstop - countstart)/(stop - start))*10)
 
         # return(abs((countstop - countstart)/(stop - start))*10)
 
