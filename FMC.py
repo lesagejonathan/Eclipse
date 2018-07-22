@@ -5,24 +5,6 @@ import os
 import multiprocessing
 
 
-def DelayCalculation(delaykey,parameters):
-
-    DelayFunction = {}
-
-    def BackwallDirectDelays(parameters):
-
-
-    def DirectDirect(parameters):
-
-
-    DelayFunction['BackwallDirectDelays'] = lambda BackwallDirectDelays(parameters)
-
-
-    return DelayFunction['BackwallDirectDelays']
-
-
-
-
 
 def NumericalAperture(x,y,L):
 
@@ -90,7 +72,7 @@ def EstimateProbeDelays(Scans, fsamp, p, h, hfraction=0.1, c=5.92):
 
 class LinearCapture:
 
-    def __init__(self, fs, scans, p, N, probedelays=None, WedgeParameters=None, delayfile=None):
+    def __init__(self, fs, scans, p, N, probedelays=None, WedgeParameters=None):
 
         import copy
 
@@ -107,8 +89,6 @@ class LinearCapture:
 
             self.ProbeDelays = probedelays
 
-        if delayfile is not None:
-
 
 
         self.AScans = copy.deepcopy(scans)
@@ -119,16 +99,6 @@ class LinearCapture:
 
         self.WedgeParameters = WedgeParameters
 
-
-
-    def ReadDelays(self,delays):
-
-        self.Delays = delays
-
-
-    def GetDelays(self,delaykey,parameters):
-
-        self.Delays = CalculateDelays(delaykey,parameters)
 
     #     GetDelays = {}
     #     GetDelays['DirectDirect'] = lambda c, offset: (GetWedgeDelays(c[0],key='send',offset[0]),GetWedgeDelays(c[1],key='rec',offset[1]))
