@@ -110,32 +110,32 @@ class LinearCapture:
     #
     #     self.Delays = CalculateDelays(delaykey,parameters)
 
-        self.DelayFunctions = {}
-        self.DelayFunctions['Direct'] = lambda c, offset: self.GetWedgeDelays(c,offset,key='sendrec')
-        self.DelayFunctions['Backwall'] = lambda c,Th,offset: self.GetWedgeBackWallDelays((c[0],c[1]),Th,offset,key='sendrec')
-        self.DelayFunctions['DirectDirect'] = lambda c, offset: (self.GetWedgeDelays(c[0],offset[0],key='send'),self.GetWedgeDelays(c[1],offset[1],key='rec'))
-        self.DelayFunctions['BackwallDirect'] = lambda c,Th,offset: (self.GetWedgeBackWallDelays((c[0],c[1]),Th,offset[0],key='send'), self.GetWedgeDelays(c[2],offset[1],key='rec'))
-        self.DelayFunctions['BackwallBackwall'] = lambda c,Th,offset: (self.GetWedgeBackWallDelays((c[0],c[1]),Th,offset[0],key='send'),self.GetWedgeBackWallDelays((c[2],c[3]),Th,offset[1],key='rec'))
-
-
-    def GetDelays(self,pathkey,c,offset,Th=None,PitchCatch = False):
-
-        if Th is None:
-
-            self.DelayFunctions[pathkey](c,offset)
-
-        else:
-
-            self.DelayFunctions[pathkey](c,Th,offset)
-
-        if PitchCatch is True:
-
-
-            return(self.SendDelays,np.flip(self.RecDelays,axis=1))
-
-        else:
-
-            return (self.SendDelays,self.RecDelays)
+    #     self.DelayFunctions = {}
+    #     self.DelayFunctions['Direct'] = lambda c, offset: self.GetWedgeDelays(c,offset,key='sendrec')
+    #     self.DelayFunctions['Backwall'] = lambda c,Th,offset: self.GetWedgeBackWallDelays((c[0],c[1]),Th,offset,key='sendrec')
+    #     self.DelayFunctions['DirectDirect'] = lambda c, offset: (self.GetWedgeDelays(c[0],offset[0],key='send'),self.GetWedgeDelays(c[1],offset[1],key='rec'))
+    #     self.DelayFunctions['BackwallDirect'] = lambda c,Th,offset: (self.GetWedgeBackWallDelays((c[0],c[1]),Th,offset[0],key='send'), self.GetWedgeDelays(c[2],offset[1],key='rec'))
+    #     self.DelayFunctions['BackwallBackwall'] = lambda c,Th,offset: (self.GetWedgeBackWallDelays((c[0],c[1]),Th,offset[0],key='send'),self.GetWedgeBackWallDelays((c[2],c[3]),Th,offset[1],key='rec'))
+    #
+    #
+    # def GetDelays(self,pathkey,c,offset,Th=None,PitchCatch = False):
+    #
+    #     if Th is None:
+    #
+    #         self.DelayFunctions[pathkey](c,offset)
+    #
+    #     else:
+    #
+    #         self.DelayFunctions[pathkey](c,Th,offset)
+    #
+    #     if PitchCatch is True:
+    #
+    #
+    #         return(self.SendDelays,np.flip(self.RecDelays,axis=1))
+    #
+    #     else:
+    #
+    #         return (self.SendDelays,self.RecDelays)
 
     # def GetDelays(self,pathkey,c,offset,Th=None):
     #
@@ -155,17 +155,18 @@ class LinearCapture:
         Ny = np.floor((yend - ystart)/yres) + 1
 
         x = np.linspace(xstart,xend,Nx)
-        y = np.linspace(ystart,-yend,Ny)
+        y = np.linspace(ystart,yend,Ny)
 
         self.xRange = x
         self.yRange = y
 
-        x,y = np.meshgrid(x,y)
+        # x,y = np.meshgrid(x,y)
 
-        self.SendDelays = [np.zeros(x.shape) for n in range(self.NumberOfElements)]
-        self.RecDelays = [np.zeros(x.shape) for n in range(self.NumberOfElements)]
+        # self.SendDelays = [np.zeros(x.shape) for n in range(self.NumberOfElements)]
+        # self.RecDelays = [np.zeros(x.shape) for n in range(self.NumberOfElements)]
 
-    def GetWedgeDelays(self, c, offset,key):
+    # def GetWedgeDelays(self, c, offset,key):
+    def GetWedgeDelays(self, c, offset):
 
         from scipy.optimize import minimize_scalar,minimize
 
@@ -208,20 +209,25 @@ class LinearCapture:
 
         delays = [ComputeDelays(x,y,n) for n in range(self.NumberOfElements)]
 
-        if key is 'send':
+        self.Delays = (delays,delays)
 
-            self.SendDelays = delays
+        # if key is 'send':
+        #
+        #     self.SendDelays = delays
+        #
+        # elif key is 'rec':
+        #
+        #     self.RecDelays = delays
+        #
+        # else:
+        #
+        #     self.SendDelays = delays
+        #     self.RecDelays = delays
 
-        elif key is 'rec':
 
-            self.RecDelays = delays
 
-        else:
-
-            self.SendDelays = delays
-            self.RecDelays = delays
-
-    def GetWedgeBackWallDelays(self, c, Th, offset, key):
+    # def GetWedgeBackWallDelays(self, c, Th, offset, key):
+    def GetWedgeBackwallDelays(self, c, Th, offset):
 
             from scipy.optimize import minimize_scalar,minimize
 
@@ -258,18 +264,20 @@ class LinearCapture:
 
             delays = [[[delays(X,Y,n) for X in self.xRange + offset] for Y in self.yRange] for n in range(self.NumberOfElements)]
 
-            if key is 'send':
+            # if key is 'send':
+            #
+            #     self.SendDelays =  delays
+            #
+            # elif key is 'rec':
+            #
+            #     self.RecDelays =  delays
+            #
+            # else:
+            #
+            #     self.SendDelays = delays
+            #     self.RecDelays = delays
 
-                self.SendDelays =  delays
-
-            elif key is 'rec':
-
-                self.RecDelays =  delays
-
-            else:
-
-                self.SendDelays = delays
-                self.RecDelays = delays
+            self.Delays = (delays,delays)
 
     def ProcessScans(self, zeropoints=20, bp=10, normalize=True):
 
