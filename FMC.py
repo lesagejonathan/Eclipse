@@ -234,9 +234,9 @@ class LinearCapture:
 
                 x0,x1 = x[0],x[1]
 
-                t = np.sqrt((h + n*p*sphi)**2 + (-cphi*n*p + x0)**2)/cw + np.sqrt((Th + Y)**2 + (X - x1)**2)/c2 + np.sqrt(Th**2 + (-x0 + x1)**2)/c1
+                t = np.sqrt((h + n*p*sphi)**2 + (-cphi*n*p + x0)**2)/cw + np.sqrt((Th - Y)**2 + (X - x1)**2)/c2 + np.sqrt(Th**2 + (-x0 + x1)**2)/c1
 
-                dtdx = [-(cphi*n*p - x0)/(cw*np.sqrt((h + n*p*sphi)**2 + (cphi*n*p - x0)**2)) + (x0 - x1)/(c1*np.sqrt(Th**2 + (x0 - x1)**2)),-(X - x1)/(c2*np.sqrt((Th + Y)**2 + (X - x1)**2)) - (x0 - x1)/(c1*np.sqrt(Th**2 + (x0 - x1)**2))]
+                dtdx = [-(cphi*n*p - x0)/(cw*np.sqrt((h + n*p*sphi)**2 + (cphi*n*p - x0)**2)) + (x0 - x1)/(c1*np.sqrt(Th**2 + (x0 - x1)**2)),-(X - x1)/(c2*np.sqrt((Th - Y)**2 + (X - x1)**2)) - (x0 - x1)/(c1*np.sqrt(Th**2 + (x0 - x1)**2))]
 
                 return t,np.array(dtdx)
 
