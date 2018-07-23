@@ -5,13 +5,6 @@ import os
 import multiprocessing
 
 
-# def DelayCalculation(delaykey,xrng,yrng,PieceParamates,ProbeParameters,WedgeParameters=None,Offset=0):
-#
-#     DelayFunction = {}
-#
-#     def GetWedgeDelays(self, c, key, Offset = 0):
-#
-#
 
 def NumericalAperture(x,y,L):
 
@@ -76,7 +69,7 @@ def EstimateProbeDelays(Scans, fsamp, p, h, hfraction=0.1, c=5.92):
 
 class LinearCapture:
 
-    def __init__(self, fs, scans, p, N, probedelays=None, WedgeParameters=None, delayfile=None):
+    def __init__(self, fs, scans, p, N, probedelays=None, WedgeParameters=None):
 
         import copy
 
@@ -94,6 +87,7 @@ class LinearCapture:
             self.ProbeDelays = probedelays
 
 
+
         self.AScans = copy.deepcopy(scans)
 
         self.AScans = [a.astype(np.float)/32768. for a in self.AScans]
@@ -106,17 +100,11 @@ class LinearCapture:
     #
     #     self.Delays = delays
 
-    # def GetDelays(self,delaykey,parameters):
-    #
-    #     self.Delays = CalculateDelays(delaykey,parameters)
-
-    #     self.DelayFunctions = {}
-    #     self.DelayFunctions['Direct'] = lambda c, offset: self.GetWedgeDelays(c,offset,key='sendrec')
-    #     self.DelayFunctions['Backwall'] = lambda c,Th,offset: self.GetWedgeBackWallDelays((c[0],c[1]),Th,offset,key='sendrec')
-    #     self.DelayFunctions['DirectDirect'] = lambda c, offset: (self.GetWedgeDelays(c[0],offset[0],key='send'),self.GetWedgeDelays(c[1],offset[1],key='rec'))
-    #     self.DelayFunctions['BackwallDirect'] = lambda c,Th,offset: (self.GetWedgeBackWallDelays((c[0],c[1]),Th,offset[0],key='send'), self.GetWedgeDelays(c[2],offset[1],key='rec'))
-    #     self.DelayFunctions['BackwallBackwall'] = lambda c,Th,offset: (self.GetWedgeBackWallDelays((c[0],c[1]),Th,offset[0],key='send'),self.GetWedgeBackWallDelays((c[2],c[3]),Th,offset[1],key='rec'))
-    #
+    #     GetDelays = {}
+    #     GetDelays['DirectDirect'] = lambda c, offset: (GetWedgeDelays(c[0],key='send',offset[0]),GetWedgeDelays(c[1],key='rec',offset[1]))
+    #     GetDelays['BackwallDirect'] = lambda c,Th,offset: (GetWedgeBackWallDelays((c[0],c[1]),Th,key='send',offset[0]), GetWedgeDelays(c[2],key='rec',offset[1]))
+    #     GetDelays['BackwallBackwall'] = lambda c,Th,offset: (GetWedgeBackWallDelays((c[0],c[1]),Th,key='send',offset[0]),GetWedgeBackWallDelays((c[2],c[3]),Th,key='rec',offset[1]))
+    #     self.GetDelays = GetDelays
     #
     # def GetDelays(self,pathkey,c,offset,Th=None,PitchCatch = False):
     #
@@ -306,172 +294,172 @@ class LinearCapture:
 
                     self.AScans[i] = self.AScans[i]/norm(self.AScans[i])
 
-    def SetGridforPipe(Radious,Thickness,offset,xres,yres,convex = True):
-
-        ymax = -offset/2
-
-        if convex:
-
-            ymin = -(offset + Thickness)
-
-        else:
-
-            ymin = -offset - Radious + np.sqrt((Radious - Thickness)**2 - (0.5*(self.NumberofElements - 1))**2)
-
-        Nx = np.floor((self.NumberofElements * self.Pitch)/xres) + 1
-        Ny = np.floor((ymax - ymin)/yres) + 1
-
-        x = np.linspace(-0.5*(self.NumberofElements - 1),0.5*(self.NumberofElements - 1),Nx)
-        y = np.linspace(ymin,ymax,Ny)
-
-        x,y = np.meshgrid(x,y)
-
-        self.xRange = x
-        self.yRange = y
-
-        self.Delays = [np.zeros(x.shape) for n in range(self.NumberOfElements)]
-
-    def GetCurvedSurfaceDelays(self, Radious, Thickness, Offset, c, Convexin = False, Convexout = False):
-
-        # For the case of center of the array aligns with the center of the curvature.
-
-        R = Radious
-        h = Thickness
-        d = Offset
-
-        from scipy.optimize import minimize_scalar,minimize
-
-        p = self.Pitch
-        cw = self.WedgeParameters['Velocity']
-        N = self.NumberOfElements
-
-        phi = np.arcsin(0.5*p*(1-N)/(R-h))
-        phi = np.array(np.linspace(-phi,phi,10))
-        r = np.array(np.linspace(R-h,R,10))
-        xm = r*np.sin(phi)
-
-        def f(x,X,Y,n):
-
-            t = np.sqrt((-0.5*p*(-N + 2*n + 1) + x)**2 + (-R - d + np.sqrt(R**2 - x**2))**2)/cw + ((-x + X)**2 + (R + d + Y - np.sqrt(R**2 - x**2))**2)/c
-
-            dtdx = (c*(x*(R + d - np.sqrt(R**2 - x**2)) + np.sqrt(R**2 - x**2)*(-0.5*p*(-N + 2*n + 1) + x)) + 2*cw*(x*(R + d + Y - np.sqrt(R**2 - x**2)) + np.sqrt(R**2 - x**2)*(x - X))*np.sqrt((0.5*p*(-N + 2*n + 1) - x)**2 + (R + d - np.sqrt(R**2 - x**2))**2))/(c*cw*np.sqrt(R**2 - x**2)*np.sqrt((0.5*p*(-N + 2*n + 1) - x)**2 + (R + d - np.sqrt(R**2 - x**2))**2))
-
-            return t, dtdx
-
-        def g(x,X,Y,n):
-
-            t = np.sqrt((-d - np.sqrt(-x**2 + (R - h)**2))**2 + (-0.5*p*(-N + 2*n + 1) + x)**2)/cw + np.sqrt((X - x)**2 + (Y + d + np.sqrt(-x**2 + (R - h)**2))**2)/c
-
-            dtdx = (c*(-x*(d + np.sqrt(-x**2 + (R - h)**2)) + np.sqrt(-x**2 + (R - h)**2)*(-0.5*p*(-N + 2*n + 1) + x))*np.sqrt((X - x)**2 + (Y + d + np.sqrt(-x**2 + (R - h)**2))**2) + cw*(-x*(Y + d + np.sqrt(-x**2 + (R - h)**2)) + (-X + x)*np.sqrt(-x**2 + (R - h)**2))*np.sqrt((d + np.sqrt(-x**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x)**2))/(c*cw*np.sqrt(-x**2 + (R - h)**2)*np.sqrt((X - x)**2 + (Y + d + np.sqrt(-x**2 + (R - h)**2))**2)*np.sqrt((d + np.sqrt(-x**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x)**2))
-
-            return t, dtdx
-
-        def l(x,X,Y,n):
-
-            t = np.sqrt((d - np.sqrt(-x**2 + (R - h)**2))**2 + (-0.5*p*(-N + 2*n + 1) + x)**2)/cw + np.sqrt((X - x)**2 + (Y - d + np.sqrt(-x**2 + (R - h)**2))**2)/c
-
-            dtdx = (c*(x*(d - np.sqrt(-x**2 + (R - h)**2)) + np.sqrt(-x**2 + (R - h)**2)*(-0.5*p*(-N + 2*n + 1) + x))*np.sqrt((X - x)**2 + (Y - d + np.sqrt(-x**2 + (R - h)**2))**2) + cw*(-x*(Y - d + np.sqrt(-x**2 + (R - h)**2)) + (-X + x)*np.sqrt(-x**2 + (R - h)**2))*np.sqrt((d - np.sqrt(-x**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x)**2))/(c*cw*np.sqrt(-x**2 + (R - h)**2)*np.sqrt((X - x)**2 + (Y - d + np.sqrt(-x**2 + (R - h)**2))**2)*np.sqrt((d - np.sqrt(-x**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x)**2))
-
-            return t, dtdx
-
-        def delays(X,Y,n):
-
-            bnds = (0.5*p*(1-N+2*n), X)
-
-            xi = 0.5*(bnds[1] + bnds[0])
-
-            if Convexin:
-
-                res = minimize(l,xi,args=(X,Y,n),method='BFGS',jac='True')
-
-                return res.fun
-
-            elif Convexout:
-
-               res = minimize(g,xi,args=(X,Y,n),method='BFGS',jac='True')
-
-               return res.fun
-
-            else:
-
-               res = minimize(f,xi,args=(X,Y,n),method='BFGS',jac='True')
-
-               x = res.x
-               y = -(d+R)+np.sqrt(R**2-x**2)
-               m = (Y-y)/(X-x)
-               a = -m*X+Y+d+R
-
-               C = np.zeros(3)
-               C[0] = 1+m**2
-               C[1] = 2*m*a
-               C[2] = a**2 - (R-h)**2
-
-               A = np.roots(C)
-
-               if (np.isreal(A[0])) or (np.isreal(A[1])):
-
-                   return nan
-
-               else:
-
-                   return res.fun
-
-
-        self.Delays = np.array([[[delays(X,Y,n) for Y in self.yRange] for X in xm] for n in range(N)])
-
-        self.Delays =  [self.Delays[n] + np.array([[delays(X,Y,n) if condition else 0 for Y in yrng] if condition else 0 for X in xrng]) for n in range(self.NumberOfElements)]
-
-        self.xRange = xm.copy()
-        self.yRange = ym.copy()
-
-    def GetCurvedSurfaceBackwallDelays(self, Radious, Thickness, Offset, c, Convexin = False, Convexout = False):
-
-        # For the case of center of the array aligns with the center of the curvature.
-
-        R = Radious
-        h = Thickness
-        d = Offset
-        c1 = c[0]
-        c2 = c[1]
-
-        from scipy.optimize import minimize_scalar,minimize
-
-        p = self.Pitch
-        cw = self.WedgeParameters['Velocity']
-        N = self.NumberOfElements
-
-        phi = np.arcsin(0.5*p*(1-N)/(R-h))
-        phi = array(np.linspace(-phi,phi,10))
-        r = array(np.linspace(R-h,R,10))
-        xm = r*np.sin(phi)
-
-        def f(x,X,Y,n):
-
-            x0,x1 = x[0],x[1]
-
-            t = sqrt((-0.5*p*(-N + 2*n + 1) + x0)**2 + (-R - d + sqrt(R**2 - x0**2))**2)/cw + sqrt((X - x1)**2 + (R + Y + d - sqrt(-x1**2 + (R - h)**2))**2)/c2 + sqrt((-x0 + x1)**2 + (-sqrt(R**2 - x0**2) + sqrt(-x1**2 + (R - h)**2))**2)/c1
-
-            dtdx = [(c1*(x0*(R + d - sqrt(R**2 - x0**2)) + sqrt(R**2 - x0**2)*(-0.5*p*(-N + 2*n + 1) + x0))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2))**2) + cw*(-x0*(sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2)) + sqrt(R**2 - x0**2)*(x0 - x1))*sqrt((0.5*p*(-N + 2*n + 1) - x0)**2 + (R + d - sqrt(R**2 - x0**2))**2))/(c1*cw*sqrt(R**2 - x0**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2))**2)*sqrt((0.5*p*(-N + 2*n + 1) - x0)**2 + (R + d - sqrt(R**2 - x0**2))**2)),(c1*(x1*(R + Y + d - sqrt(-x1**2 + (R - h)**2)) + (-X + x1)*sqrt(-x1**2 + (R - h)**2))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2))**2) + c2*(x1*(sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2)) + (-x0 + x1)*sqrt(-x1**2 + (R - h)**2))*sqrt((X - x1)**2 + (R + Y + d - sqrt(-x1**2 + (R - h)**2))**2))/(c1*c2*sqrt(-x1**2 + (R - h)**2)*sqrt((X - x1)**2 + (R + Y + d - sqrt(-x1**2 + (R - h)**2))**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2))**2))]
-
-            return t,array(dtdx)
-
-        def g(x,X,Y,n):
-
-            x0,x1 = x[0],x[1]
-
-            t = sqrt((-d - sqrt(-x0**2 + (R - h)**2))**2 + (-0.5*p*(-N + 2*n + 1) + x0)**2)/cw + sqrt((X - x1)**2 + (Y + d + sqrt(R**2 - x1**2))**2)/c2 + sqrt((-x0 + x1)**2 + (-sqrt(R**2 - x1**2) + sqrt(-x0**2 + (R - h)**2))**2)/c1
-
-            dtdx = [(c1*(-x0*(d + sqrt(-x0**2 + (R - h)**2)) + sqrt(-x0**2 + (R - h)**2)*(-0.5*p*(-N + 2*n + 1) + x0))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2) + cw*(x0*(sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2)) + (x0 - x1)*sqrt(-x0**2 + (R - h)**2))*sqrt((d + sqrt(-x0**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x0)**2))/(c1*cw*sqrt(-x0**2 + (R - h)**2)*sqrt((d + sqrt(-x0**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x0)**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2)),(c1*(-x1*(Y + d + sqrt(R**2 - x1**2)) + sqrt(R**2 - x1**2)*(-X + x1))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2) + c2*(-x1*(sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2)) + sqrt(R**2 - x1**2)*(-x0 + x1))*sqrt((X - x1)**2 + (Y + d + sqrt(R**2 - x1**2))**2))/(c1*c2*sqrt(R**2 - x1**2)*sqrt((X - x1)**2 + (Y + d + sqrt(R**2 - x1**2))**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2))]
-
-            return t, array(dtdx)
-
-        def l(x,X,Y,n):
-
-            x0,x1 = x[0],x[1]
-
-            t = sqrt((d - sqrt(-x0**2 + (R - h)**2))**2 + (-0.5*p*(-N + 2*n + 1) + x0)**2)/cw + sqrt((X - x1)**2 + (Y - d + sqrt(R**2 - x1**2))**2)/c2 + sqrt((-x0 + x1)**2 + (-sqrt(R**2 - x1**2) + sqrt(-x0**2 + (R - h)**2))**2)/c1
-
-            dtdx = [(c1*(x0*(d - sqrt(-x0**2 + (R - h)**2)) + sqrt(-x0**2 + (R - h)**2)*(-0.5*p*(-N + 2*n + 1) + x0))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2) + cw*(x0*(sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2)) + (x0 - x1)*sqrt(-x0**2 + (R - h)**2))*sqrt((d - sqrt(-x0**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x0)**2))/(c1*cw*sqrt(-x0**2 + (R - h)**2)*sqrt((d - sqrt(-x0**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x0)**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2)),(c1*(-x1*(Y - d + sqrt(R**2 - x1**2)) + sqrt(R**2 - x1**2)*(-X + x1))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2) + c2*(-x1*(sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2)) + sqrt(R**2 - x1**2)*(-x0 + x1))*sqrt((X - x1)**2 + (Y - d + sqrt(R**2 - x1**2))**2))/(c1*c2*sqrt(R**2 - x1**2)*sqrt((X - x1)**2 + (Y - d + sqrt(R**2 - x1**2))**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2))]
+    # def SetGridforPipe(Radious,Thickness,offset,xres,yres,convex = True):
+    #
+    #     ymax = -offset/2
+    #
+    #     if convex:
+    #
+    #         ymin = -(offset + Thickness)
+    #
+    #     else:
+    #
+    #         ymin = -offset - Radious + np.sqrt((Radious - Thickness)**2 - (0.5*(self.NumberofElements - 1))**2)
+    #
+    #     Nx = np.floor((self.NumberofElements * self.Pitch)/xres) + 1
+    #     Ny = np.floor((ymax - ymin)/yres) + 1
+    #
+    #     x = np.linspace(-0.5*(self.NumberofElements - 1),0.5*(self.NumberofElements - 1),Nx)
+    #     y = np.linspace(ymin,ymax,Ny)
+    #
+    #     x,y = np.meshgrid(x,y)
+    #
+    #     self.xRange = x
+    #     self.yRange = y
+    #
+    #     self.Delays = [np.zeros(x.shape) for n in range(self.NumberOfElements)]
+    #
+    # def GetCurvedSurfaceDelays(self, Radious, Thickness, Offset, c, Convexin = False, Convexout = False):
+    #
+    #     # For the case of center of the array aligns with the center of the curvature.
+    #
+    #     R = Radious
+    #     h = Thickness
+    #     d = Offset
+    #
+    #     from scipy.optimize import minimize_scalar,minimize
+    #
+    #     p = self.Pitch
+    #     cw = self.WedgeParameters['Velocity']
+    #     N = self.NumberOfElements
+    #
+    #     phi = np.arcsin(0.5*p*(1-N)/(R-h))
+    #     phi = np.array(np.linspace(-phi,phi,10))
+    #     r = np.array(np.linspace(R-h,R,10))
+    #     xm = r*np.sin(phi)
+    #
+    #     def f(x,X,Y,n):
+    #
+    #         t = np.sqrt((-0.5*p*(-N + 2*n + 1) + x)**2 + (-R - d + np.sqrt(R**2 - x**2))**2)/cw + ((-x + X)**2 + (R + d + Y - np.sqrt(R**2 - x**2))**2)/c
+    #
+    #         dtdx = (c*(x*(R + d - np.sqrt(R**2 - x**2)) + np.sqrt(R**2 - x**2)*(-0.5*p*(-N + 2*n + 1) + x)) + 2*cw*(x*(R + d + Y - np.sqrt(R**2 - x**2)) + np.sqrt(R**2 - x**2)*(x - X))*np.sqrt((0.5*p*(-N + 2*n + 1) - x)**2 + (R + d - np.sqrt(R**2 - x**2))**2))/(c*cw*np.sqrt(R**2 - x**2)*np.sqrt((0.5*p*(-N + 2*n + 1) - x)**2 + (R + d - np.sqrt(R**2 - x**2))**2))
+    #
+    #         return t, dtdx
+    #
+    #     def g(x,X,Y,n):
+    #
+    #         t = np.sqrt((-d - np.sqrt(-x**2 + (R - h)**2))**2 + (-0.5*p*(-N + 2*n + 1) + x)**2)/cw + np.sqrt((X - x)**2 + (Y + d + np.sqrt(-x**2 + (R - h)**2))**2)/c
+    #
+    #         dtdx = (c*(-x*(d + np.sqrt(-x**2 + (R - h)**2)) + np.sqrt(-x**2 + (R - h)**2)*(-0.5*p*(-N + 2*n + 1) + x))*np.sqrt((X - x)**2 + (Y + d + np.sqrt(-x**2 + (R - h)**2))**2) + cw*(-x*(Y + d + np.sqrt(-x**2 + (R - h)**2)) + (-X + x)*np.sqrt(-x**2 + (R - h)**2))*np.sqrt((d + np.sqrt(-x**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x)**2))/(c*cw*np.sqrt(-x**2 + (R - h)**2)*np.sqrt((X - x)**2 + (Y + d + np.sqrt(-x**2 + (R - h)**2))**2)*np.sqrt((d + np.sqrt(-x**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x)**2))
+    #
+    #         return t, dtdx
+    #
+    #     def l(x,X,Y,n):
+    #
+    #         t = np.sqrt((d - np.sqrt(-x**2 + (R - h)**2))**2 + (-0.5*p*(-N + 2*n + 1) + x)**2)/cw + np.sqrt((X - x)**2 + (Y - d + np.sqrt(-x**2 + (R - h)**2))**2)/c
+    #
+    #         dtdx = (c*(x*(d - np.sqrt(-x**2 + (R - h)**2)) + np.sqrt(-x**2 + (R - h)**2)*(-0.5*p*(-N + 2*n + 1) + x))*np.sqrt((X - x)**2 + (Y - d + np.sqrt(-x**2 + (R - h)**2))**2) + cw*(-x*(Y - d + np.sqrt(-x**2 + (R - h)**2)) + (-X + x)*np.sqrt(-x**2 + (R - h)**2))*np.sqrt((d - np.sqrt(-x**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x)**2))/(c*cw*np.sqrt(-x**2 + (R - h)**2)*np.sqrt((X - x)**2 + (Y - d + np.sqrt(-x**2 + (R - h)**2))**2)*np.sqrt((d - np.sqrt(-x**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x)**2))
+    #
+    #         return t, dtdx
+    #
+    #     def delays(X,Y,n):
+    #
+    #         bnds = (0.5*p*(1-N+2*n), X)
+    #
+    #         xi = 0.5*(bnds[1] + bnds[0])
+    #
+    #         if Convexin:
+    #
+    #             res = minimize(l,xi,args=(X,Y,n),method='BFGS',jac='True')
+    #
+    #             return res.fun
+    #
+    #         elif Convexout:
+    #
+    #            res = minimize(g,xi,args=(X,Y,n),method='BFGS',jac='True')
+    #
+    #            return res.fun
+    #
+    #         else:
+    #
+    #            res = minimize(f,xi,args=(X,Y,n),method='BFGS',jac='True')
+    #
+    #            x = res.x
+    #            y = -(d+R)+np.sqrt(R**2-x**2)
+    #            m = (Y-y)/(X-x)
+    #            a = -m*X+Y+d+R
+    #
+    #            C = np.zeros(3)
+    #            C[0] = 1+m**2
+    #            C[1] = 2*m*a
+    #            C[2] = a**2 - (R-h)**2
+    #
+    #            A = np.roots(C)
+    #
+    #            if (np.isreal(A[0])) or (np.isreal(A[1])):
+    #
+    #                return nan
+    #
+    #            else:
+    #
+    #                return res.fun
+    #
+    #
+    #     self.Delays = np.array([[[delays(X,Y,n) for Y in self.yRange] for X in xm] for n in range(N)])
+    #
+    #     self.Delays =  [self.Delays[n] + np.array([[delays(X,Y,n) if condition else 0 for Y in yrng] if condition else 0 for X in xrng]) for n in range(self.NumberOfElements)]
+    #
+    #     self.xRange = xm.copy()
+    #     self.yRange = ym.copy()
+    #
+    # def GetCurvedSurfaceBackwallDelays(self, Radious, Thickness, Offset, c, Convexin = False, Convexout = False):
+    #
+    #     # For the case of center of the array aligns with the center of the curvature.
+    #
+    #     R = Radious
+    #     h = Thickness
+    #     d = Offset
+    #     c1 = c[0]
+    #     c2 = c[1]
+    #
+    #     from scipy.optimize import minimize_scalar,minimize
+    #
+    #     p = self.Pitch
+    #     cw = self.WedgeParameters['Velocity']
+    #     N = self.NumberOfElements
+    #
+    #     phi = np.arcsin(0.5*p*(1-N)/(R-h))
+    #     phi = array(np.linspace(-phi,phi,10))
+    #     r = array(np.linspace(R-h,R,10))
+    #     xm = r*np.sin(phi)
+    #
+    #     def f(x,X,Y,n):
+    #
+    #         x0,x1 = x[0],x[1]
+    #
+    #         t = sqrt((-0.5*p*(-N + 2*n + 1) + x0)**2 + (-R - d + sqrt(R**2 - x0**2))**2)/cw + sqrt((X - x1)**2 + (R + Y + d - sqrt(-x1**2 + (R - h)**2))**2)/c2 + sqrt((-x0 + x1)**2 + (-sqrt(R**2 - x0**2) + sqrt(-x1**2 + (R - h)**2))**2)/c1
+    #
+    #         dtdx = [(c1*(x0*(R + d - sqrt(R**2 - x0**2)) + sqrt(R**2 - x0**2)*(-0.5*p*(-N + 2*n + 1) + x0))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2))**2) + cw*(-x0*(sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2)) + sqrt(R**2 - x0**2)*(x0 - x1))*sqrt((0.5*p*(-N + 2*n + 1) - x0)**2 + (R + d - sqrt(R**2 - x0**2))**2))/(c1*cw*sqrt(R**2 - x0**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2))**2)*sqrt((0.5*p*(-N + 2*n + 1) - x0)**2 + (R + d - sqrt(R**2 - x0**2))**2)),(c1*(x1*(R + Y + d - sqrt(-x1**2 + (R - h)**2)) + (-X + x1)*sqrt(-x1**2 + (R - h)**2))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2))**2) + c2*(x1*(sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2)) + (-x0 + x1)*sqrt(-x1**2 + (R - h)**2))*sqrt((X - x1)**2 + (R + Y + d - sqrt(-x1**2 + (R - h)**2))**2))/(c1*c2*sqrt(-x1**2 + (R - h)**2)*sqrt((X - x1)**2 + (R + Y + d - sqrt(-x1**2 + (R - h)**2))**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x0**2) - sqrt(-x1**2 + (R - h)**2))**2))]
+    #
+    #         return t,array(dtdx)
+    #
+    #     def g(x,X,Y,n):
+    #
+    #         x0,x1 = x[0],x[1]
+    #
+    #         t = sqrt((-d - sqrt(-x0**2 + (R - h)**2))**2 + (-0.5*p*(-N + 2*n + 1) + x0)**2)/cw + sqrt((X - x1)**2 + (Y + d + sqrt(R**2 - x1**2))**2)/c2 + sqrt((-x0 + x1)**2 + (-sqrt(R**2 - x1**2) + sqrt(-x0**2 + (R - h)**2))**2)/c1
+    #
+    #         dtdx = [(c1*(-x0*(d + sqrt(-x0**2 + (R - h)**2)) + sqrt(-x0**2 + (R - h)**2)*(-0.5*p*(-N + 2*n + 1) + x0))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2) + cw*(x0*(sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2)) + (x0 - x1)*sqrt(-x0**2 + (R - h)**2))*sqrt((d + sqrt(-x0**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x0)**2))/(c1*cw*sqrt(-x0**2 + (R - h)**2)*sqrt((d + sqrt(-x0**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x0)**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2)),(c1*(-x1*(Y + d + sqrt(R**2 - x1**2)) + sqrt(R**2 - x1**2)*(-X + x1))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2) + c2*(-x1*(sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2)) + sqrt(R**2 - x1**2)*(-x0 + x1))*sqrt((X - x1)**2 + (Y + d + sqrt(R**2 - x1**2))**2))/(c1*c2*sqrt(R**2 - x1**2)*sqrt((X - x1)**2 + (Y + d + sqrt(R**2 - x1**2))**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2))]
+    #
+    #         return t, array(dtdx)
+    #
+    #     def l(x,X,Y,n):
+    #
+    #         x0,x1 = x[0],x[1]
+    #
+    #         t = sqrt((d - sqrt(-x0**2 + (R - h)**2))**2 + (-0.5*p*(-N + 2*n + 1) + x0)**2)/cw + sqrt((X - x1)**2 + (Y - d + sqrt(R**2 - x1**2))**2)/c2 + sqrt((-x0 + x1)**2 + (-sqrt(R**2 - x1**2) + sqrt(-x0**2 + (R - h)**2))**2)/c1
+    #
+    #         dtdx = [(c1*(x0*(d - sqrt(-x0**2 + (R - h)**2)) + sqrt(-x0**2 + (R - h)**2)*(-0.5*p*(-N + 2*n + 1) + x0))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2) + cw*(x0*(sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2)) + (x0 - x1)*sqrt(-x0**2 + (R - h)**2))*sqrt((d - sqrt(-x0**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x0)**2))/(c1*cw*sqrt(-x0**2 + (R - h)**2)*sqrt((d - sqrt(-x0**2 + (R - h)**2))**2 + (0.5*p*(-N + 2*n + 1) - x0)**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2)),(c1*(-x1*(Y - d + sqrt(R**2 - x1**2)) + sqrt(R**2 - x1**2)*(-X + x1))*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2) + c2*(-x1*(sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2)) + sqrt(R**2 - x1**2)*(-x0 + x1))*sqrt((X - x1)**2 + (Y - d + sqrt(R**2 - x1**2))**2))/(c1*c2*sqrt(R**2 - x1**2)*sqrt((X - x1)**2 + (Y - d + sqrt(R**2 - x1**2))**2)*sqrt((x0 - x1)**2 + (sqrt(R**2 - x1**2) - sqrt(-x0**2 + (R - h)**2))**2))]
 
     def ReverseElements(self):
 
@@ -722,7 +710,7 @@ class LinearCapture:
 
         return 2 * ifftn(X, s=(X.shape[0], L), axes=(0, 2))
 
-    def ApplyTFM(self, ScanIndex, Elements=None, FilterParams=None, Normalize=False, PitchCatch=False):
+    def ApplyTFM(self, ScanIndex, Elements=None, FilterParams=None, Normalize=False):
 
         if FilterParams is None:
 
@@ -744,40 +732,20 @@ class LinearCapture:
 
         if Elements is None:
 
-            def ElementFocus(m,n):
-
-                I = np.interp((self.Delays[0][m]+self.Delays[1][n]).flatten(),t,a[m,n,:])
-
-                np.nan_to_num(I,copy=False)
-
-                return I
-
             Elements = (range(self.NumberOfElements), range(self.NumberOfElements))
 
-        else:
-
-            if PitchCatch is True:
-
-                def ElementFocus(m,n):
-
-                        I = np.interp((self.Delays[0][m]+self.Delays[1][n-32]).flatten(),t,a[m,n,:])
-
-                        np.nan_to_num(I,copy=False)
-
-                        return I
-
-            else:
-
-                def ElementFocus(m,n):
-
-                        I = np.interp((self.Delays[0][m]+self.Delays[1][n]).flatten(),t,a[m,n,:])
-
-                        np.nan_to_num(I,copy=False)
-
-                        return I
 
 
-        I = reduce(lambda x,y: x+y, (ElementFocus(m,n) for m in Elements[0] for n in Elements[1])).reshape((len(self.yRange),len(self.xRange)))
+        def ElementFocus(m,n):
+
+            I = np.interp((self.Delays[0][m]+self.Delays[1][n]).flatten(),t,a[Elements[0][m],Elements[1][n],:])
+
+            np.nan_to_num(I,copy=False)
+
+            return I
+
+
+        I = reduce(lambda x,y: x+y, (ElementFocus(m,n) for m in range(len(Elements[0])) for n in range(len(Elements[1])))).reshape((len(self.yRange),len(self.xRange)))
 
 
         if Normalize:
