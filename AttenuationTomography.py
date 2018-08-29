@@ -37,7 +37,7 @@ class AttenuationTomography:
 
 
 
-    def GetSpectralImage(self, ScanIndex, RefIndex, d, fpower, c, resolution=0.1, windowparams=(50, 0.1, 4, 1., 1.), rcondnum = 1e-2):
+    def GetSpectralImage(self, ScanIndex, RefIndex, d, fpower, c, fband=None, resolution=0.1, windowparams=(50, 0.1, 4, 1., 1.), rcondnum = 1e-2):
 
         from numpy.fft import ifft,fftshift,rfft,ifftshift,ifftn
         from scipy.signal import tukey
@@ -48,6 +48,8 @@ class AttenuationTomography:
 
         # M = N**2
 
+        # M = N**2
+
 
         # c = self.Capture.WaveSpeed
 
@@ -55,18 +57,19 @@ class AttenuationTomography:
 
         dx = p
 
-        dy = p
 
-        Nx = int(np.round(((N-1)*p)/dx))
+        Nx = N
 
-        # Ny = int(round(M/Nx))
+        # Nx = int(np.round(((N-1)*p)/dx))
 
-        Ny = int(d/(2*dy))
+        Ny = int(round(M/Nx))
 
 
-        # dy = d/Ny
 
-        # dy = d/Ny
+
+        # dy = d/(2*Ny)
+
+        dy = 2*d/Ny
         #
         # print(dy)
         # print(Ny)
@@ -82,7 +85,11 @@ class AttenuationTomography:
         # aref = self.Capture.AScans[RefIndex]
         # a = self.Capture.AScans[ScanIndex]
 
-        Kx,Ky = np.meshgrid(2*np.pi*np.linspace(-1/(2*dx),1/(2*dx), Nx) + 0j, 2*np.pi*np.linspace(0,1/(2*dy), Ny) + 0j)
+        # Kx,Ky = np.meshgrid(2*np.pi*np.linspace(-1/(2*dx),1/(2*dx), Nx) + 0j, 2*np.pi*np.linspace(0,1/(2*dy), Ny) + 0j)
+
+
+        Kx,Ky = np.meshgrid(2*np.pi*np.linspace(-1/(2*dx),1/(2*dx), Nx) + 0j, 2*np.pi*np.linspace(-1/(2*dy),1/(2*dy), Ny) + 0j)
+
 
         kx = Kx.flatten().astype(np.complex128)
         ky = Ky.flatten().astype(np.complex128)
@@ -92,6 +99,7 @@ class AttenuationTomography:
         # B = np.zeros((M,len(kx)),dtype=np.complex128)
 
         x = np.linspace(-0.5*p*(N-1),0.5*p*(N-1),N)
+
 
         # x = np.linspace(0,p*(N-1),N)
 
@@ -112,17 +120,18 @@ class AttenuationTomography:
             #
             #     c1 = x[n]
 
+            D = 2*d
 
-            c0 = (x[n] - x[m])/(2*d) +0j
+            c0 = (x[n] - x[m])/(2*D) +0j
 
             c1 = x[m] + 0j
 
 
-            If = np.exp(1j*kx*c1)*(np.exp(1j*d*(kx*c0+ky)) - 1 + 0j)/(1j*(kx*c0+ky))
+            If = np.exp(1j*kx*c1)*(np.exp(1j*D*(kx*c0+ky)) - 1 + 0j)/(1j*(kx*c0+ky))
 
             infmask = np.logical_not(np.isfinite(If))
 
-            If[infmask] = np.exp(1j*kx[infmask]*c1)*d
+            If[infmask] = np.exp(1j*kx[infmask]*c1)*D
 
 
             c0 = -(x[n] - x[m])/(2*d) + 0j
@@ -137,8 +146,10 @@ class AttenuationTomography:
 
             Ib[infmask] = np.exp(1j*kx[infmask]*c1)*d
 
+            # return (If+Ib).reshape(1,-1)
 
-            return (If+Ib).reshape(1,-1)
+            return If
+
 
         Gavg = []
         Gexp = []
@@ -159,6 +170,8 @@ class AttenuationTomography:
 
 
 
+
+
                 ind = int(np.round(self.Capture.SamplingFrequency*np.sqrt((x[n]-x[m])**2 + (2*d)**2)/c))
 
                 Aref = rfft(W*aref[m,n,ind-windowparams[0]:ind+windowparams[0]], NFFT)
@@ -166,7 +179,14 @@ class AttenuationTomography:
                 A = rfft(W*a[m,n,ind-windowparams[0]:ind+windowparams[0]], NFFT)
 
 
-                indfreq = GetSpectralRange(Aref,A)
+
+                if fband is None:
+
+                    indfreq = GetSpectralRange(Aref,A)
+
+                else:
+
+                    indfreq = np.where((f>=fband[0])&(f<=fband[1]))[0]
 
                 # print(A.shape)
 
@@ -192,11 +212,12 @@ class AttenuationTomography:
 
         Aexp = np.linalg.lstsq(B,Gexp,rcondnum)[0].reshape(Kx.shape)
 
-
         Wkx = tukey(Aavg.shape[1],windowparams[-1]).reshape(1,-1)
-        Wky = tukey(2*Aavg.shape[0],windowparams[-2])
+        Wky = tukey(Aavg.shape[0],windowparams[-2]).reshape(-1,1)
+        # Wky = tukey(2*Aavg.shape[0],windowparams[-2])
 
-        Wky=Wky[Kx.shape[0]::].reshape(-1,1)
+        # Wky=Wky[Kx.shape[0]::].reshape(-1,1)
+
 
         W = Wkx*Wky
         W = W.astype(np.complex128)
@@ -213,37 +234,56 @@ class AttenuationTomography:
         # Aexp = np.dot(Binv,Gexp).reshape(Ky.shape)
 
 
-        # Nx = int(np.round((N-1)*p/resolution))
+        Nx = int(np.round((N-1)*p/resolution))
         #
-        # xzeropad = np.zeros((Aavg.shape[0],int(np.round((Nx - Aavg.shape[1]-2)/2))), dtype=np.complex128)
+        xzeropad = np.zeros((Aavg.shape[0],int(np.round((Nx - Aavg.shape[1]-2)/2))), dtype=np.complex128)
         #
-        # # Aavg = ifft(ifftshift(np.hstack((xzeropad, Aavg, xzeropad)), axes=(1,)),axis=1)
+        # Aavg = ifft(ifftshift(np.hstack((xzeropad, Aavg, xzeropad)), axes=(1,)),axis=1)
+        #
+        # Aexp = ifft(ifftshift(np.hstack((xzeropad, Aexp, xzeropad)), axes=(1,)),axis=1)
+        #
+        Aavg = np.hstack((xzeropad, Aavg, xzeropad))
+
+        Aexp = np.hstack((xzeropad, Aexp, xzeropad))
+
+
+        Ny = int(np.round(d/resolution))
+
+
+        yzeropad = np.zeros((int(np.round((Ny - Aavg.shape[0]-2)/2)), Aavg.shape[1]), dtype=np.complex128)
+
+        Aavg = np.vstack((yzeropad,Aavg,yzeropad))
+
+        Aexp = np.vstack((yzeropad,Aexp,yzeropad))
+
+
+
+
+        #
+        # Aavg = ifft(ifftshift(Aavg, axes=(1,)),axis=1)
+        #
+        # Aexp = ifft(ifftshift(Aexp, axes=(1,)),axis=1)
+
+
+        # Ny = int(np.round(d/resolution))
+        #
+        # yzeropad = np.zeros((Aavg.shape[0],int(np.round((Nx - Aavg.shape[1]-2)/2))), dtype=np.complex128)
+        #
+        #
+        #
+        # # Aavg = 2*Aavg[1::,:]
         # #
-        # # Aexp = ifft(ifftshift(np.hstack((xzeropad, Aexp, xzeropad)), axes=(1,)),axis=1)
+        # # Aexp = 2*Aexp[1::,:]
         #
-        # Aavg = np.hstack((xzeropad, Aavg, xzeropad))
-        #
-        # Aexp = np.hstack((xzeropad, Aexp, xzeropad))
+        # return fftshift(ifft(Aavg,axis=0,n=Ny),axes=(1,)), fftshift(ifft(Aexp,axis=0,n=Ny),axes=(1,)), B
 
-
-        Aavg = ifft(ifftshift(Aavg, axes=(1,)),axis=1)
-
-        Aexp = ifft(ifftshift(Aexp, axes=(1,)),axis=1)
-
-
-        # Ny = int(np.round(d/(2*resolution)))
-
-        # Aavg = 2*Aavg[1::,:]
-        #
-        # Aexp = 2*Aexp[1::,:]
-
-        return fftshift(ifft(Aavg,axis=0,n=2*Ny-2),axes=(1,)), fftshift(ifft(Aexp,axis=0,n=2*Ny-2),axes=(1,)), B
+        return fftshift(ifftn(ifftshift(Aavg)),axes=(1,)), fftshift(ifftn(ifftshift(Aexp)),axes=(1,)), B
 
         # return ifftn(Aavg,axes=(1,0),s=(Nx,int(2*Ny-2)))
 
 
 
-    def GetGridImage(self, ScanIndex, RefIndex, d, fpower, c, resolution=0.1, windowparams=(50, 0.1, 4), rcondnum = 1e-2):
+    def GetGridImage(self, ScanIndex, RefIndex, d, fpower, c, xrange,resolution=0.1, fband=None, windowparams=(50, 0.1, 4), rcondnum = 1e-2):
 
 
         from numpy.fft import ifft,fftshift,rfft,ifftshift
@@ -262,20 +302,26 @@ class AttenuationTomography:
 
         # dx = np.sqrt(((N-1)*p*d)/M)
 
-        dx = p
-
-        dy = p
-
-
-
-        Nx = int(np.round(((N-1)*p)/dx))
-
-        # Ny = int(M/Nx)
+        # dx = p
         #
+        # dy = p
         #
-        # dy = d/Ny
+        dx = resolution
+        dy = resolution
 
-        Ny = int(np.round(d/dy))
+        # dx = np.sqrt(d*p*(N-1)/M)
+        # dy = p*(N-1)*d/(dx*M)
+
+
+
+        # Nx = int(np.round(((N-1)*p)/dx))
+        #
+        # # Ny = int(M/Nx)
+        # #
+        # #
+        # # dy = d/Ny
+        #
+        # Ny = int(np.round(d/dy))
 
 
         # dx = 2*p
@@ -323,13 +369,18 @@ class AttenuationTomography:
 
         # x = np.linspace(0.,(N-1)*p,N)
 
-        # xgrid, ygrid = np.meshgrid(np.linspace(0.,(Nx-1)*dx,Nx),np.linspace(0.,(Ny-1)*dy,Ny))
+
+        xx = np.linspace(xrange[0],xrange[1],int(np.round((xrange[1]-xrange[0])/dx)))
+
+        xgrid, ygrid = np.meshgrid(np.arange(xx[0]+dx/2,xx[-1],dx),np.arange(dy/2,d,dy))
+
+
 
 
         # xgrid, ygrid = np.meshgrid(np.arange(x[0],x[-1],dx),np.arange(0.,d,dy))
         #
-        # Nx = xgrid.shape[1]
-        # Ny = xgrid.shape[0]
+        Nx = xgrid.shape[1]
+        Ny = xgrid.shape[0]
         #
         #
         # xgrid = xgrid.reshape(1,-1)
@@ -391,8 +442,6 @@ class AttenuationTomography:
                 BB = np.zeros((1,int(Nx*Ny)))
 
 
-
-
                 ind = int(np.round(fs*np.sqrt((xn-xm)**2 + (2*d)**2)/c))
 
                 Aref = rfft(W*aref[m,n,ind-windowparams[0]:ind+windowparams[0]], NFFT)
@@ -400,7 +449,13 @@ class AttenuationTomography:
                 A = rfft(W*a[m,n,ind-windowparams[0]:ind+windowparams[0]], NFFT)
 
 
-                indf = GetSpectralRange(Aref,A)
+                if fband is None:
+
+                    indf = GetSpectralRange(Aref,A)
+
+                else:
+
+                    indf = np.where((f>=fband[0])&(f<=fband[1]))[0]
 
 
                 Aref = Aref[indf]
@@ -408,11 +463,12 @@ class AttenuationTomography:
 
                 Arefmax = np.amax(abs(Aref))
 
-                v = FitPowerLaw(f[indf],np.log(np.abs(Aref)/np.abs(A)),fpower)
+                v = FitPowerLaw(f[indf],-np.log(np.abs(A)/np.abs(Aref)),fpower)
 
                 Gavg.append(v[2])
                 Gexp.append(v[0])
 
+                B.append((np.abs(xray(ygrid,m,n,0)-xgrid)<dx).astype(np.float) + (np.abs(xray(ygrid,m,n,1)-xgrid)<dx).astype(np.float))
 
                 # BB = BB + (np.abs(xray(ygrid,m,n,0)-xgrid)<dx).astype(np.float) + (np.abs(xray(ygrid,m,n,1)-xgrid)<dx).astype(np.float)
 
@@ -438,120 +494,120 @@ class AttenuationTomography:
                 # GG.append(G0)
 
 
-                def xf(y):
-                    return (((xn-xm)*y)/(2*d)) + xm
-
-                def yf(x):
-                    return ((x - xm)*2*d)/(xn - xm)
-
-                def xb(y):
-                    return (((xm-xn)*y)/(2*d)) + xn
-
-                def yb(x):
-                    return ((x - xn)*2*d)/(xm - xn)
-
-
-                xy = []
-
-
-                for p in range(int(round(np.ceil(xm/dx))), int(round(np.floor(xf(d)/dx)))):
-
-                    xp = dx*p
-
-                    yp = yf(xp)
-
-
-                    xy.append([xp, yp])
-
-                for q in range(Ny):
-
-                    yq = dy*q
-
-                    xq = xf(yq)
-
-
-                    xy.append([xq,yq])
-
-
-                xy = np.array(xy).reshape((len(xy),2))
-
-                ixysort = np.argsort(xy[:,1])
-
-                xy = xy[ixysort,:]
-
-
-                for i in range(xy.shape[0]-1):
-
-                    x0 = xy[i, 0]
-                    x1 = xy[i+1 , 0]
-
-                    y0 = xy[i, 1]
-                    y1 = xy[i+1, 1]
-
-                    p = int(np.floor(x0/dx))
-                    q = int(np.floor(y0/dy))
-
-                    r = np.sqrt((x1 - x0)**2 + (y1 - y0)**2)
-                    #
-                    # print(n + m*(N-m))
-                    #
-                    # print(p+q*Nx)
-
-                    # B[n + m*N, p+q*Nx] = B[n + m*N, p+q*Nx] + r
-
-                    BB[0,p+q*Nx] = BB[0,p+q*Nx] + r
-
-                    # B[n + m*(N-m), p+q*Nx] = B[n + m*(N-m), p+q*Nx] + r
-
-
-                xy = []
-
-
-                for p in range(int(np.ceil(xf(d)/dx)), int(np.floor(xn/dx))):
-
-                    xp = dx*p
-
-                    yp = yb(xp)
-
-                    xy.append([xp, yp])
-
-
-                for q in range(Ny):
-
-                    yq = dy*q
-
-                    xq = xb(yq)
-
-                    xy.append([xq,yq])
-
-
-                xy = np.array(xy).reshape((len(xy),2))
-
-                ixysort = np.argsort(xy[:,1])
-
-                ixysort = ixysort[::-1]
-
-                xy = xy[ixysort, :]
-
-                for i in range(xy.shape[0]-1):
-
-                    x0 = xy[i, 0]
-                    x1 = xy[i+1 , 0]
-
-                    y0 = xy[i, 1]
-                    y1 = xy[i+1, 1]
-
-                    p = int(np.floor(x0/dx))
-                    q = int(np.floor(y0/dy))
-
-                    r = np.sqrt((x1 - x0)**2 + (y1 - y0)**2)
-
-
-                    # B[n + m*(N-m), p+q*Nx] = B[n + m*(N-m), p+q*Nx] + r
-
-                    BB[0,p+q*Nx] = BB[0,p+q*Nx] + r
-
-                B.append(BB)
+                # def xf(y):
+                #     return (((xn-xm)*y)/(2*d)) + xm
+                #
+                # def yf(x):
+                #     return ((x - xm)*2*d)/(xn - xm)
+                #
+                # def xb(y):
+                #     return (((xm-xn)*y)/(2*d)) + xn
+                #
+                # def yb(x):
+                #     return ((x - xn)*2*d)/(xm - xn)
+                #
+                #
+                # xy = []
+                #
+                #
+                # for p in range(int(round(np.ceil(xm/dx))), int(round(np.floor(xf(d)/dx)))):
+                #
+                #     xp = dx*p
+                #
+                #     yp = yf(xp)
+                #
+                #
+                #     xy.append([xp, yp])
+                #
+                # for q in range(Ny):
+                #
+                #     yq = dy*q
+                #
+                #     xq = xf(yq)
+                #
+                #
+                #     xy.append([xq,yq])
+                #
+                #
+                # xy = np.array(xy).reshape((len(xy),2))
+                #
+                # ixysort = np.argsort(xy[:,1])
+                #
+                # xy = xy[ixysort,:]
+                #
+                #
+                # for i in range(xy.shape[0]-1):
+                #
+                #     x0 = xy[i, 0]
+                #     x1 = xy[i+1 , 0]
+                #
+                #     y0 = xy[i, 1]
+                #     y1 = xy[i+1, 1]
+                #
+                #     p = int(np.floor(x0/dx))
+                #     q = int(np.floor(y0/dy))
+                #
+                #     r = np.sqrt((x1 - x0)**2 + (y1 - y0)**2)
+                #     #
+                #     # print(n + m*(N-m))
+                #     #
+                #     # print(p+q*Nx)
+                #
+                #     # B[n + m*N, p+q*Nx] = B[n + m*N, p+q*Nx] + r
+                #
+                #     BB[0,p+q*Nx] = BB[0,p+q*Nx] + r
+                #
+                #     # B[n + m*(N-m), p+q*Nx] = B[n + m*(N-m), p+q*Nx] + r
+                #
+                #
+                # xy = []
+                #
+                #
+                # for p in range(int(np.ceil(xf(d)/dx)), int(np.floor(xn/dx))):
+                #
+                #     xp = dx*p
+                #
+                #     yp = yb(xp)
+                #
+                #     xy.append([xp, yp])
+                #
+                #
+                # for q in range(Ny):
+                #
+                #     yq = dy*q
+                #
+                #     xq = xb(yq)
+                #
+                #     xy.append([xq,yq])
+                #
+                #
+                # xy = np.array(xy).reshape((len(xy),2))
+                #
+                # ixysort = np.argsort(xy[:,1])
+                #
+                # ixysort = ixysort[::-1]
+                #
+                # xy = xy[ixysort, :]
+                #
+                # for i in range(xy.shape[0]-1):
+                #
+                #     x0 = xy[i, 0]
+                #     x1 = xy[i+1 , 0]
+                #
+                #     y0 = xy[i, 1]
+                #     y1 = xy[i+1, 1]
+                #
+                #     p = int(np.floor(x0/dx))
+                #     q = int(np.floor(y0/dy))
+                #
+                #     r = np.sqrt((x1 - x0)**2 + (y1 - y0)**2)
+                #
+                #
+                #     # B[n + m*(N-m), p+q*Nx] = B[n + m*(N-m), p+q*Nx] + r
+                #
+                #     BB[0,p+q*Nx] = BB[0,p+q*Nx] + r
+                #
+                # B.append(BB)
 
 
         B = np.array(B).reshape(M,int(Nx*Ny))
@@ -565,8 +621,8 @@ class AttenuationTomography:
         # np.nan_to_num(Gexp,copy=False)
         # np.nan_to_num(Gavg,copy=False)
 
-
-        Iexp = np.linalg.lstsq(B, Gexp, rcond=rcondnum)[0].reshape((Ny,Nx))
+        #
+        # Iexp = np.linalg.lstsq(B, Gexp, rcond=rcondnum)[0].reshape((Ny,Nx))
 
         Iavg = np.linalg.lstsq(B, Gavg, rcond=rcondnum)[0].reshape((Ny,Nx))
 
@@ -576,7 +632,7 @@ class AttenuationTomography:
         # Iavg = lsqr(B, Gavg)[0].reshape((Ny,Nx))
 
 
-        return Iavg,Iexp,B
+        return Iavg
 
 
-        # return zoom(Iexp,(int(dy/resolution),ind(dx/resolution)),mode='nearest',order=1), zoom(Iavg,(int(dy/resolution),int(dx/resolution)),mode='nearest',order=1), B
+        # return zoom(Iexp,(dy/resolution,dx/resolution),order=1), zoom(Iavg,(dy/resolution,dx/resolution),order=1), B

@@ -3,7 +3,7 @@ import os
 from numpy import *
 import linecache
 
-def LoadAScansFromTxt(fl):
+def LoadAScansFromTxt(fl,scantype='FMC'):
 
     nt = int(linecache.getline(fl,2).split(' : ')[1])
 
@@ -13,14 +13,21 @@ def LoadAScansFromTxt(fl):
 
     x = x[:,-nch-1:-1]
 
-    x = [x[i:i+nt,:].transpose() for i in range(0,nt*nch,nt)]
+    if scantype == 'FMC':
 
-    x = vstack(x)
+        x = [x[i:i+nt,:].transpose() for i in range(0,nt*nch,nt)]
 
+        x = vstack(x)
 
-    x = x.reshape((nch,nch,nt))
+        x = x.reshape((nch,nch,nt))
+
+    elif scantype == 'Sectorial':
+
+        x = x.transpose()
 
     return x
+
+
 
 def ConvertAScanToBinary(infl,outfl,bitdepth='16'):
 
