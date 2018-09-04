@@ -256,6 +256,7 @@ class LinearCapture:
 
             self.Delays = (delays,delays)
 
+<<<<<<< HEAD
     def SetPitchCatchDelays(self):
 
         delays = self.Delays
@@ -269,6 +270,9 @@ class LinearCapture:
         self.Delays = (delays[0],d)
 
     def ProcessScans(self, zeropoints=20, bp=10, normalize=True):
+=======
+    def ProcessScans(self, zeropoints=20, bp=10, normalize=True, takehilbert=True):
+>>>>>>> f27524b0ec6d0fa2ae431c569280aea70db99020
 
         from scipy.signal import detrend, hilbert
         from numpy.linalg import norm
@@ -279,17 +283,27 @@ class LinearCapture:
 
         dmax = np.amax(d)
 
+        Lmax = np.amin(np.abs(L-d))
+
         if dmax<zeropoints:
 
             for i in range(len(self.AScans)):
+
+                a = np.zeros((self.NumberOfElements,self.NumberOfElements,Lmax))
 
                 for m in range(self.NumberOfElements):
 
                     for n in range(self.NumberOfElements):
 
-                        self.AScans[i][m,n,0:zeropoints-d[m,n]] = 0.
+                        self.AScans[i][m,n,0:zeropoints] = 0.
 
-                self.AScans[i] = hilbert(detrend(self.AScans[i], bp=list(np.arange(0, L, bp).astype(int))))
+                        a[m,n,0:L-d[m,n]] = self.AScans[i][m,n,d[m,n]:L]
+
+                self.AScans[i] = detrend(a, bp=list(np.arange(0, Lmax, bp).astype(int)))
+
+                if takehilbert:
+
+                    self.AScans[i] = hilbert(self.AScans[i])
 
                 if normalize:
 

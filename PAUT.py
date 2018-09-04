@@ -15,6 +15,10 @@ from Signal import ShiftSignal
 #     Offsets = h*np.tan(anglesw)
 #
 #     return Offsets
+
+
+
+
 class Sweep:
 
     def __init__(self, scans, samplingfreq, angles, elements,c, pitch, wedgeparams=None, depthoffsets=None):
@@ -52,7 +56,20 @@ class Sweep:
             self.GetContactIndexOffsets()
 
 
-
+    # def RemoveWedgeDelays(self):
+    #
+    #     for i in range(len(self.Angles)):
+    #
+    #         for j in range(len(self.Angles)):
+    #
+    #             h = self.WedgeParameters['Height'] + (self.Elements[i][-1]+0.5*self.Elements[i][0])*self.Pitch
+    #
+    #             angi = np.arcsin(self.WedgeParameters['Velocity']*self.Angles[i][j]/self.WaveSpeed)
+    #
+    #
+    #
+    #             self.AScans[i] = [j,Ntoffset::]
+    #
 
     def ProcessScans(self,Nclip):
 
