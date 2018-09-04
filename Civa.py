@@ -69,6 +69,29 @@ class CivaModel:
         self.tree=ET.parse(self.ModelXML)
         self.root=self.tree.getroot()
 
+    def DefineProbe(self,Frequency,Pitch,NoOfElements):
+
+        self.root[1][0][1][0][0].attrib['nbElements'] = str(NoOfElements)
+        self.root[1][0][1][0][0].attrib['widthIncid'] = str(Pitch)
+        self.root[1][0][1][0][0].attrib['spaceInterIncid'] = str(0)
+
+        id = ''
+        for i in range(len(range(NoOfElements))):
+            id = id + str(i) + ';'
+
+        self.root[1][0][1][0][0].attrib['id'] = id
+        self.root[1][0][3][0].attrib['fCentrale'] = str(Frequency)
+
+    def SetArraySequence(self,StartElement,EndElement):
+
+        Elements = list(range(StartElement,EndElement + 1))
+
+        Sequence = ''
+        for i in range(len(Elements)):
+            Sequence = Sequence + str(Elements[i]) + ';'
+
+        self.root[3][1][0][0][0].attrib['listVoiesEmission'] = Sequence
+        self.root[3][1][0][0][0].attrib['listVoiesReception'] = Sequence
 
     def DrawLine(self,Boundary,pt1,pt2,LineType="Straight"):
 
@@ -111,8 +134,6 @@ class CivaModel:
         g = open(self.ModelXML,'w')
         g.writelines(KK)
         g.close()
-
-
 
 class LSample:
 

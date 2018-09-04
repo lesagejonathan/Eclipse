@@ -16,8 +16,95 @@ def CorrectSetting(setting, limits):
 
     return Setting
 
+def ReadBeamToolLawFile(BTFile,ZFile):
 
-#
+    filepath = '/mnt/c/Users/mmarvasti/Desktop/SCCLaws5/'
+
+    f=open(filepath + BTFile,'r')
+
+    L = f.readlines()
+    BL = []
+
+    for i in range(len(L)):
+
+        BL.append(L[i].split(' \t'))
+
+    N = BL[1][0]
+    A = BL[1][6]
+    T = BL[1][8]
+    R = BL[1][9]
+    S = BL[1][10]
+    I = BL[1][11]
+    D = BL[1][12]
+    V = BL[1][14]
+
+    L = []
+
+    # L.append('V5.0 1\r\n')
+    # L.append(N + ' 1000 1 6 1 0 ' + A + ' 900 ' + T + ' ' + R + ' 0 -11999 1015 38302 5920 0\r\n')
+    # L.append(N + ' 1000 1 6 1 0 ' + A + ' 2700 ' + T + ' ' + R + ' 0 ' + S + ' ' + I + ' ' + D + ' ' + V + ' 0\n')
+    L.append(N + ' 1000 1 6 1 0 0 2700 ' + T + ' ' + R + ' 0 ' + S + ' ' + I + ' ' + D + ' ' + V + ' 0\n')
+
+    elements = list(range(1,int(N)+1))
+
+    for i in range(len(elements)):
+
+        L.append(str(elements[i]) + ' 0 ' + str(BL[elements[i]+1][2]) + ' ' + str(BL[elements[i]+1][3]) + ' 75 100\r\n' )
+
+    L = [LL.encode() for LL in L]
+
+    filepath = '/mnt/c/Users/mmarvasti/Desktop/ZirconLaws/'
+
+    f = open(filepath+ZFile,'wb')
+    f.writelines(L)
+    f.close()
+
+def CustomLawFile(a):
+
+    L = []
+
+    # L.append('V5.0 ' + str(len(a)) + '\r\n')
+
+    sourcefilepath = '/mnt/c/Users/mmarvasti/Desktop/SCCLaws5/'
+
+    for n in range(len(a)):
+
+        f = open(sourcefilepath + str(a[n]) + '.law','r')
+
+        LL = f.readlines()
+
+        BL = []
+
+        print(n)
+
+        for i in range(len(LL)):
+
+            BL.append(LL[i].split(' \t'))
+
+        N = BL[1][0]
+        T = BL[1][8]
+        R = BL[1][9]
+        V = BL[1][14]
+
+        L.append(N + ' 1000 1 6 1 0 0 2700 ' + T + ' ' + R + ' 0 ' + str(50*n) + ' 0 0 ' + V + ' 0 ' '\n')
+        # L.append(N + ' 1000 1 6 1 0 0 2700 ' + T + ' ' + R + ' 0 S ' + I         + ' D ' + V + ' 0\n')
+
+        elements = list(range(1,int(N)+1))
+
+        for i in range(len(elements)):
+
+            L.append(str(elements[i]) + ' 0 ' + str(BL[elements[i]+1][2]) + ' ' + str(BL[elements[i]+1][3]) + ' 75 100\r\n')
+
+        f.close()
+
+    ML = [LL.encode() for LL in L]
+
+    filepath = '/mnt/c/Users/mmarvasti/Desktop/ZirconLaws/CustomLaw.law'
+
+    f = open(filepath,'wb')
+    f.writelines(ML)
+    f.close()
+
 # def SectorialLawFile(filename, elements, pitch = 0.5, angles=(40, 70), wedgeangle = 39., WedgeVelocity = 2.33, PieceVelocity = 3.24, voltage = 200., gain = 80., pulsewidth = 100.):
 #
 #     gain = CorrectSetting(gain, (0.,80.))
@@ -61,7 +148,6 @@ def CorrectSetting(setting, limits):
 #     f.writelines(L)
 #     f.close()
 
-
 def FMCLawFile(filename, elements, voltage = 200., gain = 80., pulsewidth = 100.,ashalfmatrix=True):
 
     gain = CorrectSetting(gain, (0.,80.))
@@ -88,7 +174,6 @@ def FMCLawFile(filename, elements, voltage = 200., gain = 80., pulsewidth = 100.
                 L.append(header)
 
                 L.append('1\t'+gain+'\t0\t0\t'+voltage+'\t'+pulsewidth+'\r\n')
-
     else:
 
         for m in range(N):
@@ -101,7 +186,41 @@ def FMCLawFile(filename, elements, voltage = 200., gain = 80., pulsewidth = 100.
 
                 L.append('1\t'+gain+'\t0\t0\t'+voltage+'\t'+pulsewidth+'\r\n')
 
+    L = [LL.encode() for LL in L]
 
+    f = open(filename,'wb')
+    f.writelines(L)
+    f.close()
+
+def FocusOnReception(filename, elements, angle = 0., pitch =0.6, voltage = 200., gain = 80., pulsewidth = 100.):
+
+    gain = CorrectSetting(gain, (0.,80.))
+    voltage = CorrectSetting(voltage, (50., 200.))
+    pulsewidth = CorrectSetting(pulsewidth, (50., 500.))
+
+    L = []
+
+    N = len(elements)
+
+    L.append('V5.0\t'+str(N)+'\r\n')
+
+    # header = str(N) +'\t'+'1000\t1\t'+str(int(40.-20.*np.log10(N)))+'\t0\t0\t0\t0\t' + str(elements[0]) + '\t' + str(elements[0]) + '\t0\t0\t0\t0\t5900\t0\r\n'
+
+    for i in range(1,N+1):
+
+        header = str(N) +'\t'+'1000\t1\t'+str(int(40.-20.*np.log10(N)))+'\t0\t0\t0\t0\t' + str(elements[0]) + '\t' + str(elements[0]) + '\t0\t' + str(int((i-1)*pitch*1000)) + '\t0\t0\t5900\t0\r\n'
+
+        L.append(header)
+
+        for n in range(1,N+1):
+
+            if (n==i):
+
+                L.append(str(n) + '\t' + gain + '\t0\t0\t' + voltage + '\t' + pulsewidth + '\r\n')
+
+            else:
+
+                L.append(str(n) + '\t' + gain + '\t0\t65535\t' + voltage + '\t' + pulsewidth + '\r\n')
 
 
     L = [LL.encode() for LL in L]
