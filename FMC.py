@@ -528,7 +528,9 @@ class LinearCapture:
 
         x,y = np.meshgrid(xrng, yrng)
 
-        self.Delays = [np.sqrt((x - xn[n])**2 + y**2)/c for n in range(self.NumberOfElements)]
+        d = [np.sqrt((x - xn[n])**2 + y**2)/c for n in range(self.NumberOfElements)]
+
+        self.Delays = (d,d)
 
 
         self.xRange = xrng.copy()
@@ -622,7 +624,7 @@ class LinearCapture:
 
         return h
 
-    def GetAdaptiveDelays(self, ScanIndex, xrng, yrng, c, Lw=10):
+    def GetAdaptiveDelays(self, ScanIndex, xrng, yrng, c, captracetype='TFM',Lw=10):
 
         from scipy.optimize import minimize_scalar, minimize
         from scipy.interpolate import interp1d,griddata
@@ -631,17 +633,28 @@ class LinearCapture:
 
         xn = np.linspace(-0.5*(self.NumberOfElements-1)*self.Pitch,0.5*(self.NumberOfElements-1)*self.Pitch,self.NumberOfElements)
 
-        self.GetContactDelays(xrng[0], yrng[0], c[0])
+        if captracetype=='TFM':
 
-        I = self.ApplyTFM(ScanIndex)
+            self.GetContactDelays(xrng[0], yrng[0], c[0])
 
-        dh = yrng[0][1] - yrng[0][0]
+            I = self.ApplyTFM(ScanIndex)
 
-        hgrid = np.argmax(np.abs(I),axis=0)*dh + yrng[0][0]
+            dh = yrng[0][1] - yrng[0][0]
 
-        hgrid = decimate(hgrid,Lw)
+            hgrid = np.argmax(np.abs(I),axis=0)*dh + yrng[0][0]
 
-        h = interp1d(xrng[0][0::Lw], hgrid, bounds_error=False)
+            hgrid = decimate(hgrid,Lw)
+
+            h = interp1d(xrng[0][0::Lw], hgrid, bounds_error=False)
+
+
+        elif captracetype=='diag':
+
+
+            hgrid = np.argmax(np.array([np.abs(self.AScans[ScanIndex][n,n,:]) for n in range(self.NumberOfElements)]).transpose(),axis=0)*0.5*c/self.SamplingFrequency
+
+            h = interp1d(xrng[0], hgrid, bounds_error=False)
+
 
         def f(x, X, Y, n):
 
