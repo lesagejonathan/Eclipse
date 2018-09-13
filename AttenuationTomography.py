@@ -626,13 +626,15 @@ class AttenuationTomography:
 
         Iavg = np.linalg.lstsq(B, Gavg, rcond=rcondnum)[0].reshape((Ny,Nx))
 
+        Iexp = np.linalg.lstsq(B, Gavg, rcond=rcondnum)[0].reshape((Ny,Nx))
+
 
         # Iexp = lsqr(B, Gexp)[0].reshape((Ny,Nx))
         #
         # Iavg = lsqr(B, Gavg)[0].reshape((Ny,Nx))
 
 
-        return Iavg
+        return Iavg,Iexp
 
 
         # return zoom(Iexp,(dy/resolution,dx/resolution),order=1), zoom(Iavg,(dy/resolution,dx/resolution),order=1), B

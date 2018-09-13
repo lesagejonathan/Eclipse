@@ -135,6 +135,7 @@ def CompressionElementField3d(L,W,f,F,resolution,Lx,Lz,rho=7.8,cp=5.92,cs=3.24,N
 
     if bc == 'stress':
 
+
         P = L*W*F*np.sinc(0.5*L*ky/np.pi)*np.sinc(0.5*W*kx/np.pi)*np.exp(1j*kz*z)/(rho*(w**2 - 2*(kx**2 + ky**2)*cs**2))
 
         P = P/np.amax(np.abs(P))
@@ -177,6 +178,44 @@ def CompressionElementField3d(L,W,f,F,resolution,Lx,Lz,rho=7.8,cp=5.92,cs=3.24,N
 
     return p
 
+
+def SteeringAmplitude(f,F,angles,wedgeangle,p,N,h,c=(2.33,3.24)):
+
+    pangles = np.rad2deg(np.arcsin(np.real(c[0])*np.sin(np.deg2rad(angles))/c[1])) - wedgeangle
+
+    Fn = [SweepFocalLaw(f,F,p,N,pang,np.real(c[0])) for pang in pangles]
+
+    dx = p/5.
+
+    Nx = int(5*N*p/dx)
+
+    kx,w = np.meshgrid(np.pi*2*f+0j,np.pi*2*np.linspace(-1/(2*dx),1/(2*dx),Nx)+0j)
+
+    print(w.shape)
+
+    print(len(f))
+
+    xn = np.linspace(-(N-1)*p/2, (N-1)*p/2, N) + 0j
+    ky = np.sqrt((w/c[0])**2 - kx**2)
+
+    ky[np.abs(np.imag(ky))>0] = 0. + 0j
+
+    A = np.array([reduce(lambda x,y: x+y, (FF[n].reshape((1,len(f)))*np.exp(-1j*kx*xn[n]) for n in range(len(FF)))) for FF in Fn])
+
+    A = (p+0j)*A*np.sinc(0.5*p*kx/(np.pi+0j))
+
+    print(A.shape)
+
+    x = -np.linspace(-dx*Nx*0.5,dx*Nx*0.5,Nx)
+
+    a = np.array([np.sum(np.abs(np.sum(A*np.exp(1j*ky*(np.sin(np.deg2rad(wedgeangle))*x + h/np.cos(np.deg2rad(wedgeangle))))*np.exp(1j*kx*np.cos(np.deg2rad(wedgeangle))*x),axis=1)),axis=1) for x in x])
+
+    # a = np.array([A*np.exp(1j*ky*(np.sin(np.deg2rad(wedgeangle))*xx + h/np.cos(np.deg2rad(wedgeangle))))*np.exp(1j*kx*np.cos(np.deg2rad(wedgeangle))*xx) for xx in x])
+
+
+    return a
+
+
 def ContactArray2d(f,F,p,resolution,Lx,Ly,rho=7.8,cL=5.91,cT=3.24,bc='stress',eta=1e-4,output='averagefield'):
 
     N = len(F)
@@ -194,25 +233,22 @@ def ContactArray2d(f,F,p,resolution,Lx,Ly,rho=7.8,cL=5.91,cT=3.24,bc='stress',et
 
     if bc == 'stress':
 
-        # A = (p+0j)*A*np.sinc(0.5*p*kx/(np.pi+0j))*np.exp(1j*ky*y)/(rho*(2*(cT*kx)**2 - w**2))
+        A = (p+0j)*A*np.sinc(0.5*p*kx/(np.pi+0j))*np.exp(1j*ky*y)/(rho*(2*(cT*kx)**2 - w**2))
 
         # A = np.sqrt((rho*(2*(cT/cL)**2 - 1)*w**2 - 2*cT**2*kx**2)**2 + 1)*(p+0j)*A*np.sinc(0.5*p*kx/(np.pi+0j))*np.exp(1j*ky*y)
 
-        A = (p+0j)*A*np.sinc(0.5*p*kx/(np.pi+0j))*np.exp(1j*ky*y)
+        # A = (p+0j)*A*np.sinc(0.5*p*kx/(np.pi+0j))*np.exp(1j*ky*y)
 
         # A = (p+0j)*A*np.sinc(0.5*p*kx/(np.pi+0j))*np.exp(1j*ky*y)/(rho*ky**2)
 
-        # A[np.abs(np.imag(ky))>0.] = 0. + 0j
-
-
-        # A = A/np.amax(np.abs(A))
+        A = A/np.amax(np.abs(A))
 
 
         s = A.shape
 
         # A[np.abs(np.imag(ky))>0.] = 0. + 0j
 
-        # A[np.abs(kx**2 - 0.5*(w/cT)**2)<eta] = np.nan
+        A[np.abs(kx**2 - 0.5*(w/cT)**2)<eta] = np.nan
 
 
 
@@ -263,6 +299,7 @@ def ContactArray2d(f,F,p,resolution,Lx,Ly,rho=7.8,cL=5.91,cT=3.24,bc='stress',et
         return np.fft.fftshift(np.fft.ifft(A,axis=1),axes = (1))
 
 
+
 def BornScatteredFieldContact(f,A,I,resolution,Lx,Ly,c=5.92):
 
     from numpy.fft import ifft, fftn, ifftn, fft
@@ -308,52 +345,3 @@ def BornScatteredFieldContact(f,A,I,resolution,Lx,Ly,c=5.92):
     p = fft(p[int(np.round(0.5*Ny)):int(np.round(1.5*Ny)),int(np.round(0.5*Nx)):int(np.round(1.5*Ny)),:],n=2*len(f) - 1,axis=2)
 
     return p
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# def ContactArray(f,F,p,l,resolution,Lx,Ly,rho=7.8,cL=5.91,cT=3.24,output='averagefield'):
-#
-#     N = len(F)
-#     # Nx = int(Lx/resolution)
-#
-#     x,y,w = np.meshgrid(np.arange(-Lx/2,Lx/2,resolution),np.arange(0.,Ly,resolution),2*np.pi*f)
-#
-#     xn = np.linspace(-(N-1)*p/2, (N-1)*p/2, N)
-#
-#
-#     kx = w/(np.sqrt(2)*cT)
-#
-#     # kx = w/cL
-#
-#     A1 = reduce(lambda x,y: x+y, (F[n].reshape((1,1,len(f)))*np.exp(1j*xn[n]*kx) for n in range(len(F))))
-#
-#     A2 = reduce(lambda x,y: x+y, (F[n].reshape((1,1,len(f)))*np.exp(-1j*xn[n]*kx) for n in range(len(F))))
-#
-#     A = (np.pi/(4*rho*w))*1j*(A1*np.exp(-1j*kx*x)*np.sinc(-kx*0.5*l/(np.pi)) + A2*np.exp(1j*kx*x)*np.sinc(kx*0.5*l/(np.pi)))*np.exp(1j*np.sqrt(1/cL**2 - 1/(2*cT**2) + 0j)*y*w)
-#
-#
-#
-#
-#     if output == 'averagefield':
-#
-#         return np.sum(np.abs(A),axis=2)
-#
-#
-#     elif output == 'frequencyfield':
-#
-#         return A

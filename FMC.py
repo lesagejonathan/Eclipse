@@ -256,6 +256,7 @@ class LinearCapture:
 
             self.Delays = (delays,delays)
 
+<<<<<<< HEAD
     def SetPitchCatchDelays(self):
 
         delays = self.Delays
@@ -268,6 +269,8 @@ class LinearCapture:
 
         self.Delays = (delays[0],d)
 
+=======
+>>>>>>> 36c9da5ed20a5d89b1305a6ff12820b9f783ccb1
     def ProcessScans(self, zeropoints=20, bp=10, normalize=True, takehilbert=True):
 
         from scipy.signal import detrend, hilbert
@@ -920,7 +923,7 @@ class LinearCapture:
 
         return h
 
-    def GetAdaptiveDelays(self, ScanIndex, xrng, yrng, c, Lw=10):
+    def GetAdaptiveDelays(self, ScanIndex, xrng, yrng, c, captracetype='TFM',Lw=10):
 
         from scipy.optimize import minimize_scalar, minimize
         from scipy.interpolate import interp1d,griddata
@@ -929,17 +932,28 @@ class LinearCapture:
 
         xn = np.linspace(-0.5*(self.NumberOfElements-1)*self.Pitch,0.5*(self.NumberOfElements-1)*self.Pitch,self.NumberOfElements)
 
-        self.GetContactDelays(xrng[0], yrng[0], c[0])
+        if captracetype=='TFM':
 
-        I = self.ApplyTFM(ScanIndex)
+            self.GetContactDelays(xrng[0], yrng[0], c[0])
 
-        dh = yrng[0][1] - yrng[0][0]
+            I = self.ApplyTFM(ScanIndex)
 
-        hgrid = np.argmax(np.abs(I),axis=0)*dh + yrng[0][0]
+            dh = yrng[0][1] - yrng[0][0]
 
-        hgrid = decimate(hgrid,Lw)
+            hgrid = np.argmax(np.abs(I),axis=0)*dh + yrng[0][0]
 
-        h = interp1d(xrng[0][0::Lw], hgrid, bounds_error=False)
+            hgrid = decimate(hgrid,Lw)
+
+            h = interp1d(xrng[0][0::Lw], hgrid, bounds_error=False)
+
+
+        elif captracetype=='diag':
+
+
+            hgrid = np.argmax(np.array([np.abs(self.AScans[ScanIndex][n,n,:]) for n in range(self.NumberOfElements)]).transpose(),axis=0)*0.5*c/self.SamplingFrequency
+
+            h = interp1d(xrng[0], hgrid, bounds_error=False)
+
 
         def f(x, X, Y, n):
 
