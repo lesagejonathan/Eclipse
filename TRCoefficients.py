@@ -1,7 +1,6 @@
 from numpy import *
 from numpy.fft import *
 from matplotlib.pylab import *
-# from misc import *
 from scipy.ndimage import *
 import os
 from skimage.feature import register_translation
@@ -26,8 +25,9 @@ phics = arcsin(cw/css)*180/pi
 rs = 7.8
 rw = 1.05
 
-# ti = arange(1,2*phicl)*pi/
-ti = arange(1,2*phicl)*pi/180
+
+# Wedge to Steel
+ti = arange(1,89)*pi/180
 ttl = []
 tts = []
 for i in range(len(ti)):
@@ -39,22 +39,47 @@ RS = []
 TL = []
 TS = []
 
-# trl = ti
-# trs=[]
-# for i in range(len(ti)):
-#     trs.append(arcsin(complex((css/csL)*sin(ti[i]))))
-
-
 for i in range(len(ti)):
 
     M = TRDict['WedgeToSteel'](ti[i],ttl[i],tts[i],cw,css,csL,rs,rw)
 
     rl,tl,ts = solve(M[0],M[1])
 
-    # M = TRDict['SteelToVacuumCompressionIncidence'](ti[i],trs[i],trl[i],css,csL,rs)
-    # rl,rrs = solve(M[0],M[1])
-
     RL.append(rl)
-    # RS.append(rrs)
     TL.append(tl)
     TS.append(ts)
+
+
+
+    # Steel to Vaccum
+    # ti = arange(1,89)*pi/180
+    # ttl = []
+    # tts = []
+    # for i in range(len(ti)):
+    #     ttl.append(arcsin(complex((csL/cw)*sin(ti[i]))))
+    #     tts.append(arcsin(complex((css/cw)*sin(ti[i]))))
+    #
+    # RL = []
+    # RS = []
+    # TL = []
+    # TS = []
+    #
+    # # trl = ti
+    # # trs=[]
+    # # for i in range(len(ti)):
+    # #     trs.append(arcsin(complex((css/csL)*sin(ti[i]))))
+    #
+    #
+    # for i in range(len(ti)):
+    #
+    #     M = TRDict['WedgeToSteel'](ti[i],ttl[i],tts[i],cw,css,csL,rs,rw)
+    #
+    #     rl,tl,ts = solve(M[0],M[1])
+    #
+    #     # M = TRDict['SteelToVacuumCompressionIncidence'](ti[i],trs[i],trl[i],css,csL,rs)
+    #     # rl,rrs = solve(M[0],M[1])
+    #
+    #     RL.append(rl)
+    #     # RS.append(rrs)
+    #     TL.append(tl)
+    #     TS.append(ts)
