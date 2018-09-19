@@ -1,7 +1,7 @@
 from functools import reduce
 import numpy as np
 from numpy.fft import rfft, ifft, fftn, ifftn, fftshift
-from pathos.multiprocessing import ProcessingPool
+# from pathos.multiprocessing import ProcessingPool
 import os
 import multiprocessing
 
