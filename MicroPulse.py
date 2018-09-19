@@ -505,7 +505,7 @@ class PeakNDT:
 
         self.Socket.send(('AWFS 1 1\r').encode())
 
-        self.CaptureSettings = {'CaptureType': 'FocusOnReception', 'Elements': Elements,
+        self.CaptureSettings = {'CaptureType':'FocusOnReception', 'Elements': Elements,
                                 'Gate':Gate,'Voltage': Voltage, 'Gain': Gain,
                                 'Averages': Averages, 'PulseWidth':PulseWidth, 'FilterSettings':FilterSettings}
 
@@ -682,12 +682,19 @@ class PeakNDT:
 
         Nt = int(self.ScanLength*(int(self.PulserSettings['BitDepth'])/8)+8)
 
-        if (self.CaptureSettings['CaptureType'] == 'FMC')&(self.EncodedScan==False):
+        if (self.CaptureSettings['CaptureType'] == 'FMC')&(self.EncodedScan is False):
 
             Ntr = len(self.CaptureSettings['Elements'][0])
             Nrc = len(self.CaptureSettings['Elements'][1])
 
             totalscanbytes = self.ScanCount*(Nt*Ntr*Nrc+2)
+
+        elif (self.CaptureSettings['CaptureType'] == 'FocusOnReception')&(self.EncodedScan is False):
+
+            Nrc = len(self.CaptureSettings['Elements'][1])
+
+            totalscanbytes = self.ScanCount*(Nt*Nrc+2)
+
 
             while len(self.Buffer)<totalscanbytes:
 

@@ -950,7 +950,7 @@ class LinearCapture:
         elif captracetype=='diag':
 
 
-            hgrid = np.argmax(np.array([np.abs(self.AScans[ScanIndex][n,n,:]) for n in range(self.NumberOfElements)]).transpose(),axis=0)*0.5*c/self.SamplingFrequency
+            hgrid = np.argmax(np.array([np.abs(self.AScans[ScanIndex][n,n,:]) for n in range(self.NumberOfElements)]).transpose(),axis=0)*0.5*c[0]/self.SamplingFrequency
 
             h = interp1d(xrng[0], hgrid, bounds_error=False)
 
@@ -983,11 +983,15 @@ class LinearCapture:
 
         x,y = np.meshgrid(xrng[1],yrng[1])
 
-        self.Delays = [DelayMin(x,y,n) for n in range(self.NumberOfElements)]
+        d = [DelayMin(x,y,n) for n in range(self.NumberOfElements)]
+
+        self.Delays = (d,d)
 
         self.xRange = xrng[1]
 
         self.yRange = yrng[1]
+
+        return h
 
     def FilterByAngle(self, ScanIndex, filtertype, angle, FWHM, c):
 
