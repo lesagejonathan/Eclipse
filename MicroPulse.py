@@ -495,7 +495,7 @@ class PeakNDT:
 
         self.Socket.send(('RXN 256 1' +'\r').encode())
 
-        self.Socket.send(('SWP 1 256' +'\r').encode())
+        self.Socket.send(('SWP 1 256 - 256'+'\r').encode())
 
         # self.Socket.send(('SWP 1 '+str(256)+' - '+str(256+len(Elements[0])-1)+'\r').encode())
 
