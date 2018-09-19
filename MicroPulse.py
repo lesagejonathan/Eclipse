@@ -424,6 +424,94 @@ class PeakNDT:
 
         self.StartBuffering()
 
+
+
+    def SetReceptionFocusCapture(self, Elements, Gate, Voltage=200., Gain=70., Averages=0, PulseWidth = 1/10., FilterSettings=(4,1)):
+
+        """ Sets FMC Type Capture to be executed
+
+        Elements  - Either integer number of elements each to be used in
+                    transmit/recieve or tuple of ranges: the first defining
+                    transmit elements and the second recieve elements
+
+        Gate - Tuple defining the start and end of the time gate to be recorded
+               in microseconds
+
+        Voltage - Float value defining desired element voltage to be applied
+                  to the transmitting elements (in Volts, adjusted to closest
+                  allowed value)
+
+        Gain - Float value defining desired reciever gain to be applied to
+                recieve elements (in dB, adjusted to closest allowed value)
+
+        Averages - Integer number of of averages to be taken for the capture
+                    (adjusted to closest allowed value)
+
+        PulseWidth - Floating point number defining pulse width for the capture
+                    (adjusted to the closest allowed value)
+
+
+        Todo:
+
+            * Allow Gate, Gain, Voltage and Averages to be set separately for
+              each element
+
+        """
+
+        self.SetPAFilter(FilterSettings)
+
+        if type(Elements) is int:
+
+            Elements = (range(1,Elements+1), range(1,Elements+1))
+
+        self.Socket.send(('PAW '+str(Elements[0][0])+' '+str(Elements[0][-1])+' '+str(self.ValidPAPulseWidth(PulseWidth))+'\r').encode())
+
+        self.Socket.send(('PAV '+str(Elements[0][0])+' '+str(Elements[0][-1])+' '+str(int(self.ValidPAVoltage(Voltage)))+'\r').encode())
+
+        gate = (int(Gate[0]*self.PulserSettings['SamplingFrequency']),int(Gate[1]*self.PulserSettings['SamplingFrequency']))
+
+        self.ScanLength = gate[1]-gate[0]
+
+        ReadLength = int(self.ScanLength*(int(self.PulserSettings['BitDepth'])/8) + 8)
+
+        self.SetPRF(1.5e6/(Gate[1]-Gate[0]))
+
+
+
+#It is one focal law
+        self.Socket.send(('TXF 1 0 -1\r').encode())
+
+        for tr in range(len(Elements[0])):
+
+            self.Socket.send(('TXF '+str(tr+1)+' '+str(Elements[0][tr])+' 0\r').encode())
+
+        self.Socket.send(('TXN 256 1' +'\r').encode())
+
+        self.Socket.send(('RXF 1 0 -1 0\r').encode())
+
+        for rc in range(len(Elements[1])):
+
+            self.Socket.send(('RXF '+str(tr+1)+' '+str(Elements[1][rc])+' 0 0\r').encode())
+
+        self.Socket.send(('RXN 256 1' +'\r').encode())
+
+        self.Socket.send(('SWP 1 256' +'\r').encode())
+
+        # self.Socket.send(('SWP 1 '+str(256)+' - '+str(256+len(Elements[0])-1)+'\r').encode())
+
+        self.Socket.send(('GANS 1 '+str(int(self.ValidGain(Gain)))+'\r').encode())
+        self.Socket.send(('GATS 1 '+str(gate[0])+' '+str(gate[1])+'\r').encode())
+        self.Socket.send(('AMPS 1 13 '+str(int(self.ValidAverage(Averages)))+' 0\r').encode())
+
+        self.Socket.send(('AWFS 1 1\r').encode())
+
+        self.CaptureSettings = {'CaptureType': 'FocusOnReception', 'Elements': Elements,
+                                'Gate':Gate,'Voltage': Voltage, 'Gain': Gain,
+                                'Averages': Averages, 'PulseWidth':PulseWidth, 'FilterSettings':FilterSettings}
+
+        self.StartBuffering()
+
+
     def ExecuteCapture(self, NExecutions=1, TimeBetweenCaptures = None):
 
 
