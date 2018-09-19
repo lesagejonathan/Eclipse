@@ -84,17 +84,23 @@ def EstimateWedgeParameters(AScans,fs,h,cw,angle,p):
 
     return {'Height':Co[1], 'Angle':np.arcsin(Co[0]/p)*180/np.pi}
 
-fs, cw, Th, cs, cl, p, h, angle, N = 25., 2.33, 10, 3.24, 5.9, 0.6, 6.95, 36.1, 16
+# fs, cw, Th, cs, cl, p, h, angle, N = 25., 2.33, 10, 3.24, 5.9, 0.6, 6.7, 31.9, 32
+
+fs, cw, T, cs, cl, p, h, angle, N = 25., 1.48, 25, 3.24, 5.9, 0.6, 32, 13, 32
 
 WedgeParameter = {'Height':h,'Velocity': cw, 'Angle':angle}
 
-Scans = pickle.load(open('/mnt/c/Users/mmarvasti/Desktop/PitchCatch/Sample10-PitchCatch-A10.p','rb'))
+# Scans = pickle.load(open('/mnt/c/Users/mmarvasti/Desktop/MoScans/CheckBackWallDelays/BackwallTest.p','rb'))
+Scans = pickle.load(open('/mnt/c/Users/mmarvasti/Desktop/MoScans/LReference.p','rb'))
+# Scans = pickle.load(open('/mnt/c/Users/mmarvasti/Desktop/MoScans/Sample11.p','rb'))
 
-F = f.LinearCapture(fs,[Scans['AScans'][0]],p,32,WedgeParameters=WedgeParameter)
+# F = f.LinearCapture(fs,[Scans['AScans'][1]],p,32,WedgeParameters=WedgeParameter)
+F = f.LinearCapture(fs,[Scans['AScans'][0]],p,64,WedgeParameters=WedgeParameter)
 
 F.ProcessScans(100,100)
 
 F.KeepElements(range(N))
+# F.KeepElements(range(32,64))
 
 WP = EstimateWedgeParameters(F.AScans[0],fs,h,cw,angle,p)
 
@@ -106,25 +112,21 @@ cw = WedgeParameter['Velocity']
 
 B = F.PlaneWaveSweep(0,(np.array([-angle]),np.array([-angle])),(range(N),range(N)),cw)
 
-Th = MeasureThickness(B,fs,N,p,h,angle,cw,cl,Th)
+Th = MeasureThickness(B,fs,N,p,h,angle,cw,cl,T)
 
 print(h)
 print(angle*180/np.pi)
 print(Th)
 
-
-
 del(F)
 
-F = f.LinearCapture(fs,[Scans['AScans'][0]],p,32,WedgeParameters=WedgeParameter)
+F = f.LinearCapture(fs,[Scans['AScans'][0]],p,64,WedgeParameters=WedgeParameter)
 
 F.ProcessScans(100,100)
 
 sweepangles = np.arange(0,3,0.25) * np.pi/180
 
-PC = F.PlaneWaveSweep(0,sweepangles,(np.array(range(16)),np.array(range(16,32))), cw)
-
-# angle = angle*np.pi/180
+PC = F.PlaneWaveSweep(0,sweepangles,(np.array(range(32)),np.array(range(32,64))), cw)
 
 S = np.array([MeasureProbeOffset(PC[i,:],sweepangles[i],fs,N,p,h,angle,cw,cs,Th)[0] for i in range(PC.shape[0])])
 

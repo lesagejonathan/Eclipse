@@ -3,7 +3,7 @@ import os
 from numpy import *
 import linecache
 
-def LoadAScansFromTxt(fl):
+def LoadAScansFromTxt(fl,scantype='FMC'):
 
     nt = int(linecache.getline(fl,2).split(' : ')[1])
 
@@ -13,14 +13,21 @@ def LoadAScansFromTxt(fl):
 
     x = x[:,-nch-1:-1]
 
-    x = [x[i:i+nt,:].transpose() for i in range(0,nt*nch,nt)]
+    if scantype == 'FMC':
 
-    x = vstack(x)
+        x = [x[i:i+nt,:].transpose() for i in range(0,nt*nch,nt)]
 
+        x = vstack(x)
 
-    x = x.reshape((nch,nch,nt))
+        x = x.reshape((nch,nch,nt))
+
+    elif scantype == 'Sectorial':
+
+        x = x.transpose()
 
     return x
+
+
 
 def ConvertAScanToBinary(infl,outfl,bitdepth='16'):
 
@@ -69,6 +76,29 @@ class CivaModel:
         self.tree=ET.parse(self.ModelXML)
         self.root=self.tree.getroot()
 
+    def DefineProbe(self,Frequency,Pitch,NoOfElements):
+
+        self.root[1][0][1][0][0].attrib['nbElements'] = str(NoOfElements)
+        self.root[1][0][1][0][0].attrib['widthIncid'] = str(Pitch)
+        self.root[1][0][1][0][0].attrib['spaceInterIncid'] = str(0)
+
+        id = ''
+        for i in range(len(range(NoOfElements))):
+            id = id + str(i) + ';'
+
+        self.root[1][0][1][0][0].attrib['id'] = id
+        self.root[1][0][3][0].attrib['fCentrale'] = str(Frequency)
+
+    def SetArraySequence(self,StartElement,EndElement):
+
+        Elements = list(range(StartElement,EndElement + 1))
+
+        Sequence = ''
+        for i in range(len(Elements)):
+            Sequence = Sequence + str(Elements[i]) + ';'
+
+        self.root[3][1][0][0][0].attrib['listVoiesEmission'] = Sequence
+        self.root[3][1][0][0][0].attrib['listVoiesReception'] = Sequence
 
     def DrawLine(self,Boundary,pt1,pt2,LineType="Straight"):
 
@@ -111,8 +141,6 @@ class CivaModel:
         g = open(self.ModelXML,'w')
         g.writelines(KK)
         g.close()
-
-
 
 class LSample:
 
