@@ -256,7 +256,7 @@ class LinearCapture:
 
             self.Delays = (delays,delays)
 
-<<<<<<< HEAD
+
     def SetPitchCatchDelays(self):
 
         delays = self.Delays
@@ -269,8 +269,7 @@ class LinearCapture:
 
         self.Delays = (delays[0],d)
 
-=======
->>>>>>> 36c9da5ed20a5d89b1305a6ff12820b9f783ccb1
+
     def ProcessScans(self, zeropoints=20, bp=10, normalize=True, takehilbert=True):
 
         from scipy.signal import detrend, hilbert

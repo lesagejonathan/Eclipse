@@ -483,7 +483,7 @@ class PeakNDT:
 
         for tr in range(len(Elements[0])):
 
-            self.Socket.send(('TXF '+str(tr+1)+' '+str(Elements[0][tr])+' 0\r').encode())
+            self.Socket.send(('TXF 1 '+str(Elements[0][tr])+' 0\r').encode())
 
         self.Socket.send(('TXN 256 1' +'\r').encode())
 
@@ -682,21 +682,22 @@ class PeakNDT:
 
         Nt = int(self.ScanLength*(int(self.PulserSettings['BitDepth'])/8)+8)
 
-        if (self.CaptureSettings['CaptureType'] == 'FMC')&(self.EncodedScan is False):
 
-            Ntr = len(self.CaptureSettings['Elements'][0])
-            Nrc = len(self.CaptureSettings['Elements'][1])
+        if ((self.CaptureSettings['CaptureType'] == 'FMC') or (self.CaptureSettings['CaptureType'] == 'FocusOnReception'))&(self.EncodedScan is False):
+
+            if self.CaptureSettings['CaptureType'] == 'FMC':
+
+                Ntr = len(self.CaptureSettings['Elements'][0])
+                Nrc = len(self.CaptureSettings['Elements'][1])
+
+
+            elif (self.CaptureSettings['CaptureType'] == 'FocusOnReception'):
+
+                Ntr = 1
+
+                Nrc = len(self.CaptureSettings['Elements'][1])
 
             totalscanbytes = self.ScanCount*(Nt*Ntr*Nrc+2)
-
-        elif (self.CaptureSettings['CaptureType'] == 'FocusOnReception')&(self.EncodedScan is False):
-
-            Ntr = 1
-
-            Nrc = len(self.CaptureSettings['Elements'][1])
-
-            totalscanbytes = self.ScanCount*(Nt*Nrc+2)
-
 
             while len(self.Buffer)<totalscanbytes:
 
