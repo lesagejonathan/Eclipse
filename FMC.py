@@ -256,7 +256,6 @@ class LinearCapture:
 
             self.Delays = (delays,delays)
 
-<<<<<<< HEAD
     def SetPitchCatchDelays(self):
 
         delays = self.Delays
@@ -269,8 +268,7 @@ class LinearCapture:
 
         self.Delays = (delays[0],d)
 
-=======
->>>>>>> 36c9da5ed20a5d89b1305a6ff12820b9f783ccb1
+
     def ProcessScans(self, zeropoints=20, bp=10, normalize=True, takehilbert=True):
 
         from scipy.signal import detrend, hilbert
@@ -280,6 +278,9 @@ class LinearCapture:
 
         d = np.round(self.ProbeDelays*self.SamplingFrequency).astype(int)
 
+        M = self.AScans[0].shape[0]
+        N = self.AScans[0].shape[1]
+
         dmax = np.amax(d)
 
         Lmax = np.amin(np.abs(L-d))
@@ -288,11 +289,11 @@ class LinearCapture:
 
             for i in range(len(self.AScans)):
 
-                a = np.zeros((self.NumberOfElements,self.NumberOfElements,Lmax))
+                a = np.zeros((M,N,Lmax))
 
-                for m in range(self.NumberOfElements):
+                for m in range(M):
 
-                    for n in range(self.NumberOfElements):
+                    for n in range(N):
 
                         self.AScans[i][m,n,0:zeropoints] = 0.
 
@@ -307,50 +308,6 @@ class LinearCapture:
                 if normalize:
 
                     self.AScans[i] = self.AScans[i]/norm(self.AScans[i])
-
-
-    def ProcessScans2(self, zeropoints=20, bp=10, normalize=True, takehilbert=True):
-
-        from scipy.signal import detrend, hilbert
-        from numpy.linalg import norm
-
-        # L = self.AScans[0].shape[2]
-        L = self.AScans[0].shape[1]
-
-        d = np.round(self.ProbeDelays*self.SamplingFrequency).astype(int)
-
-        dmax = np.amax(d)
-
-        Lmax = np.amin(np.abs(L-d))
-
-        if dmax<zeropoints:
-
-            for i in range(len(self.AScans)):
-
-                A = self.AScans[i]
-
-                self.AScans[i] = A.reshape(1,A.shape[0],A.shape[1])
-
-                a = np.zeros((self.NumberOfElements,self.NumberOfElements,Lmax))
-
-                for m in range(1):
-
-                    for n in range(self.NumberOfElements):
-
-                        self.AScans[i][m,n,0:zeropoints] = 0.
-
-                        a[m,n,0:L-d[m,n]] = self.AScans[i][m,n,d[m,n]:L]
-
-                self.AScans[i] = detrend(a, bp=list(np.arange(0, Lmax, bp).astype(int)))
-
-                if takehilbert:
-
-                    self.AScans[i] = hilbert(self.AScans[i])
-
-                if normalize:
-
-                    self.AScans[i] = self.AScans[i]/norm(self.AScans[i])
-
 
     # def ProcessScans2(self, zeropoints=20, bp=10, normalize=True):
     #
@@ -949,10 +906,13 @@ class LinearCapture:
 
         elif captracetype=='diag':
 
+            t0 = int(self.SamplingFrequency*2*yrng[0][0]/c[0])
+
 
             hgrid = np.argmax(np.array([np.abs(self.AScans[ScanIndex][n,n,:]) for n in range(self.NumberOfElements)]).transpose(),axis=0)*0.5*c[0]/self.SamplingFrequency
 
             h = interp1d(xrng[0], hgrid, bounds_error=False)
+
 
 
         def f(x, X, Y, n):
@@ -990,8 +950,8 @@ class LinearCapture:
         self.xRange = xrng[1]
 
         self.yRange = yrng[1]
-
-        return h
+        #
+        # return h
 
     def FilterByAngle(self, ScanIndex, filtertype, angle, FWHM, c):
 
@@ -1084,54 +1044,36 @@ class LinearCapture:
         return I
 
 
-    def ApplyTFM2(self, ScanIndex, Elements=None, FilterParams=None, Normalize=False, OnLine=False):
-
-       if FilterParams is None:
-
-           a = self.AScans[ScanIndex]
-
-       else:
-
-           a = self.FilterByAngle(
-               ScanIndex,
-               FilterParams[0],
-               FilterParams[1],
-               FilterParams[2],
-               FilterParams[3])
+    def FocusOnReception(self, ScanIndex, Elements=None, Normalize=False):
 
 
-       L = a.shape[1]
+        a = self.AScans[ScanIndex]
 
-       t = np.linspace(0.,L-1,L)/self.SamplingFrequency
+        L = a.shape[2]
 
-       if Elements is None:
+        t = np.linspace(0.,L-1,L)/self.SamplingFrequency
 
-           Elements = (range(self.NumberOfElements), range(self.NumberOfElements))
+        if Elements is None:
 
-       def ElementFocus(n):
+            Elements = range(self.NumberOfElements)
 
-           I = np.interp((self.Delays[0][n]+self.Delays[1][n]).flatten(),t,a[Elements[1][n],:])
+        def ElementFocus(n):
 
-           np.nan_to_num(I,copy=False)
+            I = np.interp((self.Delays[0]+self.Delays[1][n]).flatten(),t,a[0,Elements[n],:])
 
-           return I
+            np.nan_to_num(I,copy=False)
+
+            return I
 
 
+        I = reduce(lambda x,y: x+y, (ElementFocus(n) for n in range(len(Elements)))).reshape((len(self.yRange),len(self.xRange)))
+        # I = reduce(lambda x,y: x+y, (ElementFocus(n) for n in range(len(Elements[1]))))
 
-       if OnLine:
+        if Normalize:
 
-           I = reduce(lambda x,y: x+y, (ElementFocus(n) for n in range(len(Elements[1]))))
+            I/np.amax(np.abs(I))
 
-       else:
-
-           I = reduce(lambda x,y: x+y, (ElementFocus(n) for n in range(len(Elements[1])))).reshape((len(self.yRange),len(self.xRange)))
-           # I = reduce(lambda x,y: x+y, (ElementFocus(n) for n in range(len(Elements[1]))))
-
-       if Normalize:
-
-           I/np.amax(np.abs(I))
-
-       return I
+        return I
 
 
 

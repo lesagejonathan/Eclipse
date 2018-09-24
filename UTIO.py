@@ -1,6 +1,6 @@
 import numpy as np
 
-def ReadUltraVisionData(flname, datatype=np.float):
+def ReadUltraVisionData(flname, ngroups=None, datatype=np.float):
 
 
     """

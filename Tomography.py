@@ -108,62 +108,132 @@ def ToHalfMatrix(a):
 #     return I(x,y)
 
 
+
 def BilinearInterp(x,y,xi,yi,fi):
+
+    """ Applies bilinear interpolation to find function at x,y given function value
+        at f(xi,yi) = fi. xi,yi,fi are specified on a uniform rectangular grid """
 
     from numpy.linalg import solve
 
+    Nx = len(xi)
+    Ny = len(yi)
+
+    dx = xi[1] - xi[0]
+    dy = yi[1] - yi[0]
+
+    xmin = xi[0]
+    ymin = yi[0]
+
     def Interp(x,y):
 
-        if (x<np.amin(xi))&(x>np.amax(xi))&(y<np.amin(yi))&(y>np.amax(yi)):
 
-            I = 0.
+        indx = int(np.floor((x-xmin)/dx))
+        indy = int(np.floor((y-ymin)/dy))
+
+        if (indx>=0)&(indx<Nx-1)&(indy>=0)&(indy<Ny-1):
+
+
+            x0 = xi[indx]
+            y0 = yi[indy]
+
+            x1 = xi[indx+1]
+            y1 = yi[indy+1]
+
+            ind = indx + Nx*indy
+
+            f00 = fi[ind]
+            f01 = fi[ind+Nx]
+            f11 = fi[ind+Nx+1]
+            f10 = fi[ind+1]
+
+
+
+
+
+
+            # r = np.sqrt((x-xi)**2 + (y-yi)**2)
+            #
+            # ind = np.argsort(r)[0:3]
+
+            # x0,y0 = xi[ind[0]],yi[ind[0]]
+            # x1,y1 = xi[ind[1]],yi[ind[1]]
+            # x2,y2 = xi[ind[2]],yi[ind[2]]
+            # x3,y3 = xi[ind[3]],yi[ind[3]]
+
+            f = np.array([f00,f01,f10,f11]).reshape(-1,1)
+
+            A = np.array([[1.,x0,y0,x0*y0],[1.,x0,y1,x0*y1],[1.,x1,y0,x1*y0],[1.,x1,y1,x1*y1]])
+
+            I = np.dot(np.array([1.,x,y,x*y]).reshape(1,-1),solve(A,f))[0,0]
+
 
         else:
 
+            I = 0.
 
-            r = np.sqrt((x-xi)**2 + (y-yi)**2)
-
-            ind = np.argsort(r)[0:3]
-
-            x0,y0 = xi[ind[0]],yi[ind[0]]
-            x1,y1 = xi[ind[1]],yi[ind[1]]
-            x2,y2 = xi[ind[2]],yi[ind[2]]
-            x3,y3 = xi[ind[3]],yi[ind[3]]
-
-            f = np.array([fi[ind[0]],fi[ind[1]],fi[ind[2]],fi[ind[3]]]).reshape(-1,1)
-
-            A = np.array([[1.,x0,y0,x0*y0],[1.,x1,y1,x1*y1],[1.,x2,y2,x2*y2],[1.,x3,y3,x3*y3]])
-
-            I = np.dot(np.array([1.,x,y,x*y]).reshape(1,-1),solve(A,f))
 
         return I
 
-    I = np.vectorize(x,y)
+    Interp = np.vectorize(Interp)
 
-    return I
+    return Interp(x,y)
 
 
 def BilinearInterpCoeffs(x,y,xi,yi):
 
-    from numpy.linalg import solve,inv,det
+    from numpy.linalg import inv,det
 
-    r = np.sqrt((x-xi)**2 + (y-yi)**2)
+    Nx = len(xi)
+    Ny = len(yi)
 
-    ind = np.argsort(r)[0:4]
+    dx = xi[1] - xi[0]
+    dy = yi[1] - yi[0]
 
-    x0,y0 = xi[ind[0]],yi[ind[0]]
-    x1,y1 = xi[ind[1]],yi[ind[1]]
-    x2,y2 = xi[ind[2]],yi[ind[2]]
-    x3,y3 = xi[ind[3]],yi[ind[3]]
+    xmin = xi[0]
+    ymin = yi[0]
 
-    A = np.array([[1.,x0,y0,x0*y0],[1.,x1,y1,x1*y1],[1.,x2,y2,x2*y2],[1.,x3,y3,x3*y3]])
 
-    coeffs = np.dot(np.array([1.,x,y,x*y]).reshape(1,-1),inv(A)).flatten()
+    indx = int(np.floor((x-xmin)/dx))
+    indy = int(np.floor((y-ymin)/dy))
+
+    # if (indx>=0)&(indx<Nx-1)&(indy>=0)&(indy<Ny-1):
+
+
+    x0 = xi[indx]
+    y0 = yi[indy]
+
+    x1 = xi[indx+1]
+    y1 = yi[indy+1]
+
+    ind = indx + Nx*indy
+
+    ind = np.array([ind, ind+Nx, ind+Nx+1, ind+1])
+
+    # f00 = fi[ind]
+    # f01 = fi[ind+Nx]
+    # f11 = fi[ind+Nx+1]
+    # f10 = fi[ind+1]
+    #
+    # f = np.array([f00,f01,f10,f11]).reshape(-1,1)
+
+    A = np.array([[1.,x0,y0,x0*y0],[1.,x0,y1,x0*y1],[1.,x1,y0,x1*y0],[1.,x1,y1,x1*y1]])
+
+    coeffs = np.dot(inv(A).transpose(),np.array([1.,x,y,x*y]).reshape(-1,1)).flatten()
+
+
+    # else:
+    #
+    #     I = 0.
+    #
+    #
+    #     return I
+
 
     return ind, coeffs
 
 
-class TomographyCapture:
+class FMCCapture:
 
     def __init__(self, capture):
 
@@ -212,7 +282,7 @@ class TomographyCapture:
 
 
 
-    def GetProjectionMatrix(self,pathkey,ds=0.1,svdcutoff=None):
+    def GetProjectionMatrix(self,pathkey,ds=0.2,svdcutoff=None):
 
         """
             Computes projection matrix if svdcutoff is not None GetProjectionMatrixInverse is called with svdcutoff value
@@ -266,7 +336,13 @@ class TomographyCapture:
                         yk = yb + (sk-lab)*(yc-yb)/lbc
 
 
+                    # print(xk)
+                    # print(yk)
+
                     ind,c = BilinearInterpCoeffs(xk,yk,self.Grid['x'],self.Grid['y'])
+
+                    # print(ind)
+                    # print(c)
 
                     for i in range(4):
 
@@ -318,9 +394,11 @@ class TomographyCapture:
             x = np.linspace(-p*(N-1)*0.5,p*(N-1)*0.5,N)
             y = np.linspace(0.,self.PathParameters[pathkey]['Thickness'],Ny)
 
-            xy = np.meshgrid(x,y)
+            # xy = np.meshgrid(x,y)
 
-            self.Grid = {'x':xy[0].flatten(), 'y':xy[1].flatten()}
+            # self.Grid = {'x':xy[0].flatten(), 'y':xy[1].flatten()}
+
+            self.Grid = {'x':x,'y':y}
 
 
     def GetAttenuationImage(self, pathkey, ScanIndex, RefIndex, fpower, resolution=0.1, fband=None, windowparams=(50, 0.1), fftpad = 4):
@@ -401,12 +479,13 @@ class TomographyCapture:
 
         x,y = np.meshgrid(np.linspace(xmin,xmax,int(np.round((xmax-xmin)/resolution))), np.linspace(ymin,ymax,int(np.round((ymax-ymin)/resolution))))
 
-        Iexp = BilinearInterp(x,y,self.Grid['x'],self.Grid['y'],Iexp)
+        Iexp = BilinearInterp(x,y,self.Grid['x'],self.Grid['y'],Iexp).reshape(x.shape)
 
-        Iavg = BilinearInterp(x,y,self.Grid['x'],self.Grid['y'],Iavg)
+        Iavg = BilinearInterp(x,y,self.Grid['x'],self.Grid['y'],Iavg).reshape(y.shape)
 
 
         return Iavg,Iexp
+
 
 
 
