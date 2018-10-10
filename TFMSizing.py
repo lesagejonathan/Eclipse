@@ -13,7 +13,7 @@ d = 0.5*(np.amax(d) + np.amin(d))
 d = d*np.ones((64,64))
 
 yholes = np.array([6.35, 12.7, 19.05, 25.4, 31.75, 38.1, 68.65, 62.3, 55.95, 49.6, 43.25, 36.9])
-Yholes = np. array([9.525, 22.225, 34.925, 65.475, 52.775, 40.075])
+Yholes = np.array([9.525, 22.225, 34.925, 65.475, 52.775, 40.075])
 holesize = np.array([1, 1, 2, 2, 2, 2, 2, 2])
 
 # Getting First Coordinate Candidates
@@ -215,7 +215,7 @@ holesize = np.array([1, 1, 2, 2, 2, 2, 2, 2])
 #     size.append(griddata(np.array([1,2,3]),s,ss(i), method = 'linear'))
 
 
-caldata = pickle.load(open('/mnt/c/Users/mmarvasti/MoFiles/MoScans/ContactCalibrationScans/CalibrationData.p','rb'))
+caldata = pickle.load(open('/mnt/c/Users/mmarvasti/Desktop/MoFiles/MoScans/ContactCalibrationScans/CalibrationData.p','rb'))
 xc = caldata['x']
 yc = caldata['y']
 g = caldata['Correction']
@@ -268,15 +268,21 @@ Is3 = []
 
 for i in range(len(scan['AScans'])):
 
-    F = FMC.LinearCapture(25,[scan['AScans'][i]],0.6,6.4,d)
+    F = FMC.LinearCapture(25,[scan['AScans'][i]],0.6,64,d)
 
     F.ProcessScans(50,70)
 
     F.Delays = delay1
 
+    F.xRange = X
+    F.yRange = Y1
+
     I = F.ApplyTFM(0)
 
-    ind = np.unravel_index(np.argmax(np.abs(I),I.shape)
+    ind = np.unravel_index(np.argmax(np.abs(I),I.shape))
+
+    print(str(ind[1]))
+    print(str(ind[0]))
 
     F.GetContactDelays(np.arange(X[ind[1]]-4.,X[ind[1]]+4.,0.1),np.arange(Y1[ind[0]]-4.,Y1[ind[0]]+4.,0.1),6.4)
 
@@ -314,9 +320,12 @@ for i in range(len(scan['AScans'])):
 
     F.Delays = delay2
 
+    F.xRange = X
+    F.yRange = Y2
+
     I = F.ApplyTFM(0)
 
-    ind = np.unravel_index(np.argmax(np.abs(I),I.shape)
+    ind = np.unravel_index(np.argmax(np.abs(I),I.shape))
 
     F.GetContactDelays(np.arange(X[ind[1]]-4,X[ind[1]]+4,0.1),np.arange(Y2[ind[0]]-4,Y2[ind[0]]+4,0.1),6.4)
 
@@ -354,9 +363,12 @@ for i in range(len(scan['AScans'])):
 
     F.Delays = delay3
 
+    F.xRange = X
+    F.yRange = Y3
+
     I = F.ApplyTFM(0)
 
-    ind = np.unravel_index(np.argmax(np.abs(I),I.shape)
+    ind = np.unravel_index(np.argmax(np.abs(I),I.shape))
 
     F.GetContactDelays(np.arange(X[ind[1]]-4,X[ind[1]]+4,0.1),np.arange(Y3[ind[0]]-4,Y3[ind[0]]+4,0.1),6.4)
 
@@ -438,15 +450,18 @@ Is3 =[]
 
 for i in range(len(scan['AScans'])):
 
-    F = FMC.LinearCapture(25,[scan['AScans'][i]],0.6,6.4,d)
+    F = FMC.LinearCapture(25,[scan['AScans'][i]],0.6,64,d)
 
     F.ProcessScans(50,70)
 
     F.Delays = delay1
 
+    F.xRange = X
+    F.yRange = Y1
+
     I = F.ApplyTFM(0)
 
-    ind = np.unravel_index(np.argmax(np.abs(I),I.shape)
+    ind = np.unravel_index(np.argmax(np.abs(I),I.shape))
 
     F.GetContactDelays(np.arange(X[ind[1]]-4.,X[ind[1]]+4.,0.1),np.arange(Y1[ind[0]]-4.,Y1[ind[0]]+4.,0.1),6.4)
 
@@ -484,9 +499,12 @@ for i in range(len(scan['AScans'])):
 
     F.Delays = delay2
 
+    F.xRange = X
+    F.yRange = Y2
+
     I = F.ApplyTFM(0)
 
-    ind = np.unravel_index(np.argmax(np.abs(I),I.shape)
+    ind = np.unravel_index(np.argmax(np.abs(I),I.shape))
 
     F.GetContactDelays(np.arange(X[ind[1]]-4,X[ind[1]]+4,0.1),np.arange(Y2[ind[0]]-4,Y2[ind[0]]+4,0.1),6.4)
 
@@ -524,9 +542,12 @@ for i in range(len(scan['AScans'])):
 
     F.Delays = delay3
 
+    F.xRange = X
+    F.yRange = Y3
+
     I = F.ApplyTFM(0)
 
-    ind = np.unravel_index(np.argmax(np.abs(I),I.shape)
+    ind = np.unravel_index(np.argmax(np.abs(I),I.shape))
 
     F.GetContactDelays(np.arange(X[ind[1]]-4,X[ind[1]]+4,0.1),np.arange(Y3[ind[0]]-4,Y3[ind[0]]+4,0.1),6.4)
 

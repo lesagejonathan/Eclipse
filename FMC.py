@@ -256,7 +256,6 @@ class LinearCapture:
 
             self.Delays = (delays,delays)
 
-<<<<<<< HEAD
     def SetPitchCatchDelays(self):
 
         delays = self.Delays
@@ -269,8 +268,6 @@ class LinearCapture:
 
         self.Delays = (delays[0],d)
 
-=======
->>>>>>> 36c9da5ed20a5d89b1305a6ff12820b9f783ccb1
     def ProcessScans(self, zeropoints=20, bp=10, normalize=True, takehilbert=True):
 
         from scipy.signal import detrend, hilbert
@@ -351,32 +348,6 @@ class LinearCapture:
 
                     self.AScans[i] = self.AScans[i]/norm(self.AScans[i])
 
-
-    # def ProcessScans2(self, zeropoints=20, bp=10, normalize=True):
-    #
-    #     from scipy.signal import detrend, hilbert
-    #     from numpy.linalg import norm
-    #
-    #     # L = self.AScans[0].shape[2]
-    #     L = self.AScans[0].shape[1]
-    #
-    #     d = np.round(self.ProbeDelays*self.SamplingFrequency).astype(int)
-    #
-    #     dmax = np.amax(d)
-    #
-    #     if dmax<zeropoints:
-    #
-    #         for i in range(len(self.AScans)):
-    #
-    #             for n in range(self.NumberOfElements):
-    #
-    #                 self.AScans[i][n,0:zeropoints-d[n]] = 0.
-    #
-    #             self.AScans[i] = hilbert(detrend(self.AScans[i], bp=list(np.arange(0, L, bp).astype(int))))
-    #
-    #             if normalize:
-    #
-    #                 self.AScans[i] = self.AScans[i]/norm(self.AScans[i])
 
     def SetGridforPipe(self,Radious,Thickness,Offset,xres,yres,convex = True):
 
