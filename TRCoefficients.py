@@ -1,3 +1,34 @@
+<<<<<<< HEAD
+import numpy as np
+
+
+def ComputeTRCoeffs(IncidentMode,MaterialProperties):
+
+
+    cL1 = MaterialProperties['LongitudinalVelocity'][0]
+
+    cL2 = MaterialProperties['LongitudinalVelocity'][1]
+
+    cT1 = MaterialProperties['ShearVelocity'][0]
+
+    cT2 = MaterialProperties['ShearVelocity'][1]
+
+    rho1 = MaterialProperties['Density'][0]
+
+    rho2 = MaterialProperties['Density'][1]
+
+    thi = np.deg2rad(IncidentMode['Angle'])
+
+
+    mode = IncidentMode['Mode']
+
+
+
+
+
+
+    a = np.array([])
+=======
 from numpy import *
 from numpy.fft import *
 from matplotlib.pylab import *
@@ -83,3 +114,4 @@ for i in range(len(ti)):
     #     # RS.append(rrs)
     #     TL.append(tl)
     #     TS.append(ts)
+>>>>>>> 80be20956c9af075ba564119461fb1e956b2f2e6

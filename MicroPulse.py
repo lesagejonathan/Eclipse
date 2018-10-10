@@ -483,7 +483,7 @@ class PeakNDT:
 
         for tr in range(len(Elements[0])):
 
-            self.Socket.send(('TXF '+str(tr+1)+' '+str(Elements[0][tr])+' 0\r').encode())
+            self.Socket.send(('TXF 1 '+str(Elements[0][tr])+' 0\r').encode())
 
         self.Socket.send(('TXN 256 1' +'\r').encode())
 
@@ -491,11 +491,11 @@ class PeakNDT:
 
         for rc in range(len(Elements[1])):
 
-            self.Socket.send(('RXF '+str(tr+1)+' '+str(Elements[1][rc])+' 0 0\r').encode())
+            self.Socket.send(('RXF 1 '+str(Elements[1][rc])+' 0 0\r').encode())
 
         self.Socket.send(('RXN 256 1' +'\r').encode())
 
-        self.Socket.send(('SWP 1 256' +'\r').encode())
+        self.Socket.send(('SWP 1 256'+'\r').encode())
 
         # self.Socket.send(('SWP 1 '+str(256)+' - '+str(256+len(Elements[0])-1)+'\r').encode())
 
@@ -505,7 +505,7 @@ class PeakNDT:
 
         self.Socket.send(('AWFS 1 1\r').encode())
 
-        self.CaptureSettings = {'CaptureType': 'FocusOnReception', 'Elements': Elements,
+        self.CaptureSettings = {'CaptureType':'FocusOnReception', 'Elements': Elements,
                                 'Gate':Gate,'Voltage': Voltage, 'Gain': Gain,
                                 'Averages': Averages, 'PulseWidth':PulseWidth, 'FilterSettings':FilterSettings}
 
@@ -682,10 +682,20 @@ class PeakNDT:
 
         Nt = int(self.ScanLength*(int(self.PulserSettings['BitDepth'])/8)+8)
 
-        if (self.CaptureSettings['CaptureType'] == 'FMC')&(self.EncodedScan==False):
 
-            Ntr = len(self.CaptureSettings['Elements'][0])
-            Nrc = len(self.CaptureSettings['Elements'][1])
+        if ((self.CaptureSettings['CaptureType'] == 'FMC') or (self.CaptureSettings['CaptureType'] == 'FocusOnReception'))&(self.EncodedScan is False):
+
+            if self.CaptureSettings['CaptureType'] == 'FMC':
+
+                Ntr = len(self.CaptureSettings['Elements'][0])
+                Nrc = len(self.CaptureSettings['Elements'][1])
+
+
+            elif (self.CaptureSettings['CaptureType'] == 'FocusOnReception'):
+
+                Ntr = 1
+
+                Nrc = len(self.CaptureSettings['Elements'][1])
 
             totalscanbytes = self.ScanCount*(Nt*Ntr*Nrc+2)
 
@@ -788,12 +798,15 @@ class PeakNDT:
         """
         self.StopBuffering()
 
+
+
         self.ScanCount = 0
         self.Buffer = bytearray()
 
         self.StopCapture = threading.Event()
         self.BufferThread = threading.Thread(target = ReadBuffer, args = (self.Socket, self.Buffer, self.StopCapture))
         self.BufferThread.start()
+
 
     def StopBuffering(self):
 
@@ -819,9 +832,11 @@ class PeakNDT:
         self.AScans = []
         self.ScanCount = 0
 
+        self.StopBuffering()
+
         # self.Socket.send(('STX 1\r').encode())
         # ReadExactly(self.Socket, 8)
-
+        #
         self.Buffer = bytearray()
 
     def SaveScans(self,Filename, ScanInfo = None, Reversed=False):
@@ -855,6 +870,8 @@ class PeakNDT:
 
 
         _pickle.dump(out,open(Filename,'wb'))
+
+        self.ClearScans()
 
     def __del__(self):
 
