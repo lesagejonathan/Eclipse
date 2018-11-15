@@ -338,46 +338,6 @@ class LinearCapture:
     def GetWedgeBackwallFrontwallDelays(self, c, Th, Offset):
 
 
-<<<<<<< HEAD
-=======
-        from scipy.optimize import minimize_scalar,minimize
-
-        p = self.Pitch
-        h = self.WedgeParameters['Height']
-
-        cw = self.WedgeParameters['Velocity']
-
-        cphi = np.cos(self.WedgeParameters['Angle'] * np.pi / 180.)
-        sphi = np.sin(self.WedgeParameters['Angle'] * np.pi / 180.)
-
-        c1 = c[0]
-        c2 = c[1]
-        c3 = c[2]
-
-        def f(x,X,Y,n):
-
-            x0,x1,x2 = x[0],x[1],x[2]
-
-            t = np.sqrt((h + n*p*sphi)**2 + (-cphi*n*p + x0)**2)/cw + np.sqrt(Y**2 + (X - x2)**2)/c3 + np.sqrt(Th**2 + (-x1 + x2)**2)/c2 + np.sqrt(Th**2 + (-x0 + x1)**2)/c1
-
-            dtdx = [-(cphi*n*p - x0)/(cw*np.sqrt((h + n*p*sphi)**2 + (cphi*n*p - x0)**2)) + (x0 - x1)/(c1*np.sqrt(Th**2 + (x0 - x1)**2)),(x1 - x2)/(c2*np.sqrt(Th**2 + (x1 - x2)**2)) - (x0 - x1)/(c1*np.sqrt(Th**2 + (x0 - x1)**2)),-(X - x2)/(c3*np.sqrt(Y**2 + (X - x2)**2)) - (x1 - x2)/(c2*np.sqrt(Th**2 + (x1 - x2)**2))]
-
-            return t,np.array(dtdx)
-
-        def delays(X,Y,n):
-
-            bnds = ((n*p*cphi,X),(n*p*cphi,X),(n*p*cphi,X))
-
-            xi = (0.5*(bnds[0][1] + bnds[0][0]),0.5*(bnds[0][1] + bnds[0][0]),0.5*(bnds[0][1] + bnds[0][0]))
-
-            res = minimize(f,xi,args=(X,Y,n),method='BFGS',jac='True')
-
-            return res.fun
-
-        delays = [[[delays(X,Y,n) for X in self.xRange + Offset] for Y in self.yRange] for n in range(self.NumberOfElements)]
-
-        self.Delays = (delays,delays)
->>>>>>> c91e0dc9529ac0c756cc6b51357f0df92609f31c
 
     def SetPitchCatchDelays(self):
 
