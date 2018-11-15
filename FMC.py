@@ -256,10 +256,7 @@ class LinearCapture:
 
             self.Delays = (delays,delays)
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 7cb020a2763c7db4d0f0e1d8f6b79fa478d79810
     def SetPitchCatchDelays(self):
 
         delays = self.Delays
