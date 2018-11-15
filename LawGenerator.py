@@ -158,12 +158,16 @@ def FMCLawFile(filename, elements, voltage = 200., gain = 80., pulsewidth = 100.
 
     N = len(elements)
 
-    L.append('V5.0\t'+str(N**2)+'\r\n')
-
-    header = '1\t'+'1000\t1\t'+str(int(40.-20.*np.log10(N)))+'\t0\t0\t0\t0\t1\t1\t0\t0\t0\t0\t5900\r\n'
-
+    # L.append('V5.0\t'+str(N**2)+'\r\n')
+    #
+    # header = '1\t'+'1000\t1\t'+str(int(40.-20.*np.log10(N)))+'\t0\t0\t0\t0\t1\t1\t0\t0\t0\t0\t5900\r\n'
+    #
 
     if ashalfmatrix:
+
+        L.append('V5.0\t'+str(int(0.5*N*(N+1)))+'\r\n')
+
+        header = '1\t'+'1000\t1\t'+str(int(40.-20.*np.log10(N)))+'\t0\t0\t0\t0\t1\t1\t0\t0\t0\t0\t5900\r\n'
 
         for m in range(N):
 
@@ -175,6 +179,11 @@ def FMCLawFile(filename, elements, voltage = 200., gain = 80., pulsewidth = 100.
 
                 L.append('1\t'+gain+'\t0\t0\t'+voltage+'\t'+pulsewidth+'\r\n')
     else:
+
+        L.append('V5.0\t'+str(N**2)+'\r\n')
+
+        header = '1\t'+'1000\t1\t'+str(int(40.-20.*np.log10(N)))+'\t0\t0\t0\t0\t1\t1\t0\t0\t0\t0\t5900\r\n'
+
 
         for m in range(N):
 
