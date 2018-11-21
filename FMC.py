@@ -4,6 +4,50 @@ from numpy.fft import rfft, ifft, fftn, ifftn, fftshift
 import os
 import multiprocessing
 import copy
+import misc
+
+def ApplySyntheticGain(I,dB,staturate=True):
+
+    In = I/np.amax(I)
+
+    In = In*(10.)**(dB/20.)
+
+    if staturate:
+
+        In[In>1.] = 1.
+
+    return In
+
+
+def GetImageStatistics(I,windowdims=(10,10),excludesaturated=True):
+
+    """ Input image, I, should be normalized such that highest amplitude is
+    1. """
+
+    Ny,Nx = I.shape
+
+    II = np.zeros((Ny,Nx,5))
+
+
+    for ix in range(int(windowdims[0]/2),Nx-int(windowdims[0]/2)+1):
+
+        for iy in range(int(windowdims[1]/2),Ny-int(windowdims[1]/2)+1):
+
+            Iw = I[iy-int(windowdims[1]/2):iy+int(windowdims[1]/2),ix-int(windowdims[0]/2):ix+int(windowdims[0]/2)].flatten()
+
+            if excludesaturated:
+
+                Iw = Iw[Iw<1.]
+
+            m = misc.moments(Iw)
+
+            for j in range(5):
+
+                II[iy,ix,j] = m[j]
+
+
+    return II
+
 
 def NumericalAperture(x,y,L):
 
@@ -172,6 +216,50 @@ class LinearCapture:
         self.xRange = x
         self.yRange = y
 
+    def GetDelayLineDelays(self,xrange,yrange,cs,cw,h,focustype='FMC'):
+
+        from scipy.optimize import minimize_scalar
+
+        p = self.Pitch
+
+        N = self.NumberOfElements
+
+        xn = np.linspace(-0.5*(N-1)*p,0.5*(N-1)*p,N)
+
+        def f(X,Y,n):
+
+            def Delay(x):
+
+                return np.sqrt((x-xn[n])**2 + h**2)/cw + np.sqrt((X-x)**2 + Y**2)/cs
+
+            bnds = np.sort(np.array([xn[n],X]))
+
+            Delaymin = minimize_scalar(Delay, bounds=bnds, method='bounded').fun
+
+            return Delaymin
+
+
+        x,y = np.meshgrid(xrange,yrange)
+
+        self.xRange = xrange
+        self.yRange = yrange
+
+        ComputeDelays = np.vectorize(f,excluded=['n'])
+
+        delays = [ComputeDelays(x,y,n) for n in range(self.NumberOfElements)]
+
+        if focustype=='FMC':
+
+            self.Delays = (delays,delays)
+
+        elif focustype=='FOR':
+
+            trdelays = np.array([((h/cw) + (y/cs))*np.ones(len(xrange)) for y in yrange])
+
+            self.Delays = (trdelays,delays)
+
+
+
     def GetWedgeDelays(self, c, offset):
 
         from scipy.optimize import minimize_scalar,minimize
@@ -256,10 +344,6 @@ class LinearCapture:
 
             self.Delays = (delays,delays)
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 7cb020a2763c7db4d0f0e1d8f6b79fa478d79810
     def SetPitchCatchDelays(self):
 
         delays = self.Delays
@@ -641,6 +725,38 @@ class LinearCapture:
 
         self.AScans = [a[::-1,::-1,:] for a in self.AScans]
 
+
+    def KeepDiagonalBand(self,band,ashalfmatrix=False):
+
+        a = []
+
+        for i in range(len(self.AScans)):
+
+            aa = np.zeros(self.AScans[i].shape,dtype=type(self.AScans[i][0,0,0]))
+
+            for m in range(self.NumberOfElements):
+
+                if ashalfmatrix:
+
+                    nstart = m
+
+                else:
+
+                    nstart = m - band
+
+
+                nend = m + band
+
+                for n in range(nstart,nend):
+
+                    if (n>=0)&(n<self.NumberOfElements):
+
+                        aa[m,n,:] = self.AScans[i][m,n,:]
+
+            a.append(aa)
+
+        self.AScans = a
+
     def PlaneWaveSweep(self, ScanIndex, Angles, Elements, c):
 
         X = np.real(self.AScans[ScanIndex][Elements[0][0]:Elements[0][-1]+1,Elements[1][0]:Elements[1][-1]+1,:])
@@ -661,15 +777,16 @@ class LinearCapture:
 
         def PlaneWaveFocus(angles):
 
-            T = np.meshgrid(f, drc * np.sin(angles[1]) / c)
+            T = np.meshgrid(f, drc * np.sin(np.deg2rad(angles[1])) / c)
+
 
             XX = np.sum(X * np.exp(-2j * np.pi *
                                    T[0] * T[1]), axis=1, keepdims=False)
 
-            T = np.meshgrid(f, dtr * np.sin(angles[0]) / c)
 
-            XX = np.sum(XX * np.exp(-2j * np.pi *
-                                    T[0] * T[1]), axis=0, keepdims=False)
+            T = np.meshgrid(f, dtr * np.sin(np.deg2rad(angles[0])) / c)
+
+            XX = np.sum(XX * np.exp(-2j * np.pi * T[0] * T[1]), axis=0, keepdims=False)
 
             x = 2*ifft(XX,2*len(XX))
 
@@ -884,6 +1001,10 @@ class LinearCapture:
 
         return h
 
+    # def ToRytovSignals(self):
+
+
+
     def GetAdaptiveDelays(self, ScanIndex, xrng, yrng, c, captracetype='TFM',Lw=10):
 
         from scipy.optimize import minimize_scalar, minimize
@@ -912,11 +1033,12 @@ class LinearCapture:
 
             t0 = int(self.SamplingFrequency*2*yrng[0][0]/c[0])
 
+            print(t0)
 
-            hgrid = np.argmax(np.array([np.abs(self.AScans[ScanIndex][n,n,:]) for n in range(self.NumberOfElements)]).transpose(),axis=0)*0.5*c[0]/self.SamplingFrequency
+
+            hgrid = np.argmax(np.array([np.abs(self.AScans[ScanIndex][n,n,t0::]) for n in range(self.NumberOfElements)]).transpose(),axis=0)*0.5*c[0]/self.SamplingFrequency + yrng[0][0]
 
             h = interp1d(xrng[0], hgrid, bounds_error=False)
-
 
 
         def f(x, X, Y, n):
@@ -1000,20 +1122,43 @@ class LinearCapture:
 
         return 2 * ifftn(X, s=(X.shape[0], L), axes=(0, 2))
 
+    # def BandPassSignals(self,ScanIndex,fband):
+    #
+    #
+    #     X = rfft(self.AScans[ScanIndex])
+    #
+    #     fc = 0.5*(fband[1]-fband[0])
+    #
+    #     c = (fband[1] - fband[0])/4.29193
+    #
+    #     # c = (fband[1] - fband[0])/2.35482
+    #
+    #     a = 1/(2*c**2)
+    #
+    #     f = np.linspace(0.,self.SamplingFrequency/2.,X.shape[-1])
+    #
+    #     W = np.exp(-a*(f-fc)**2) + 0j
+    #
+    #     x = irfft(X*W)
+    #
+    #     return x
+
     def ApplyTFM(self, ScanIndex, Elements=None, FilterParams=None, Normalize=False, OnLine=False):
 
-        if FilterParams is None:
+        # if FilterParams is None:
 
-            a = self.AScans[ScanIndex]
+        a = self.AScans[ScanIndex]
 
-        else:
-
-            a = self.FilterByAngle(
-                ScanIndex,
-                FilterParams[0],
-                FilterParams[1],
-                FilterParams[2],
-                FilterParams[3])
+        # else:
+        #
+        #
+        #
+        #     # a = self.FilterByAngle(
+        #     #     ScanIndex,
+        #     #     FilterParams[0],
+        #     #     FilterParams[1],
+        #     #     FilterParams[2],
+        #     #     FilterParams[3])
 
 
         L = a.shape[2]

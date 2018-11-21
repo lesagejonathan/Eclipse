@@ -41,7 +41,7 @@ def ComputeTRCoeffs(IncidentMode, IncidentAmplitude, Angle, cL, cT, rho):
     ERT - Shear energy reflection coefficient,
     ETL - Longitudinal energy transmission coefficient,
     TT - Shear energy transmission coefficient,
-    
+
 
     """
 
@@ -189,7 +189,7 @@ def ComputeTRCoeffs(IncidentMode, IncidentAmplitude, Angle, cL, cT, rho):
 
         ERT[3] = (np.abs(RT[3])**2)*(rho2*cT2*np.cos(thT2))/(rho1*cT1*np.cos(thi))
 
-        ERT[2] = (np.abs(RT[2])**2)*(rho2*cL2*np.cos(thL2))/(rho1*cT2*np.cos(thi))
+        ERT[2] = (np.abs(RT[2])**2)*(rho2*cL2*np.cos(thL2))/(rho1*cT1*np.cos(thi))
 
 
     if np.abs(np.imag(thL2))>0:
