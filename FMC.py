@@ -44,8 +44,6 @@ def EstimateProbeDelays(Scans, fsamp, p, h, hfraction=0.1, c=5.92):
 
     W = int(np.round(fsamp * hfraction * h / c))
 
-    print(W)
-
     Delays = np.zeros((M, N))
 
     A = np.zeros(M)
@@ -64,28 +62,6 @@ def EstimateProbeDelays(Scans, fsamp, p, h, hfraction=0.1, c=5.92):
             Delays[m, n] = indmax / fsamp
 
     return Delays, A.reshape(-1, 1) * A.reshape(1, -1)
-
-def MeasureThickness(AScans,fs,N,p,h,angle,cw,cl,Th):
-
-    from scipy.signal import hilbert
-
-    h = h + 0.5*p*(N-1)*np.sin(angle)
-
-    T = int(np.round(fs*2*(h/cw + Th/cl)))
-
-    W = int(np.round(fs*0.25*Th/cl))
-
-    b = np.argmax(np.abs(hilbert(np.real(AScans[0,0,T-W:T+W])))) + T - W
-
-    t1 = b/fs
-
-    T = int(np.round(fs*2*(h/cw + 2*Th/cl)))
-
-    b = np.argmax(np.abs(hilbert(np.real(AScans[0,0,T-W:T+W])))) + T - W
-
-    t2 = b/fs
-
-    return 0.5*cl*(t2-t1)
 
 def MeasureProbeOffset(AScans,SweepAngle,fs,N,p,h,angle,cw,cs,Th):
 
@@ -110,36 +86,6 @@ def MeasureProbeOffset(AScans,SweepAngle,fs,N,p,h,angle,cw,cs,Th):
 
     return (np.max(s),offset)
 
-def KeepDiagonalElements(AScans):
-
-    return np.array([AScans[n,n,:] for n in range(AScans.shape[0])])
-
-def EstimateWedgeParameters(AScans,fs,h,cw,angle,p):
-
-    from scipy.signal import hilbert
-
-    A = KeepDiagonalElements(AScans)
-
-    B = np.zeros(A.shape[0])
-
-    for i in range(A.shape[0]):
-
-        eh = h + i*p*np.sin(angle*np.pi/180)
-
-        t = int(np.round(fs*2*eh/cw))
-
-        w = int(np.round(fs*0.25*eh/cw))
-
-        b = np.argmax(np.abs(hilbert(np.real(A[i,t-w:t+w])))) + t - w
-
-        B[i] = (0.5*cw*b)/fs
-
-    Co = np.polyfit(np.array(range(A.shape[0])),B,1)
-
-    # return {'Height':Co[1], 'Angle':np.arcsin(Co[0]/p)*180/np.pi}
-    # return {'Height':Co[1], 'Angle':np.arcsin(Co[0]/p)*180/np.pi}
-    return B
-
 def RearrangeHalfMatrixData(AScans,N):
 
     d = AScans[:,:,0]
@@ -162,7 +108,6 @@ class LinearCapture:
 
         self.SamplingFrequency = fs
         self.Pitch = p
-        # self.Velocity = c
         self.NumberOfElements = N
 
         if probedelays is None:
@@ -180,6 +125,109 @@ class LinearCapture:
         self.AmplitudeCorrection = None
 
         self.WedgeParameters = WedgeParameters
+
+    def EstimateThickness(self,c,Th,Elements):
+
+        from scipy.signal import hilbert
+
+        N = self.NumberOfElements
+        p = self.Pitch
+        h = self.WedgeParameters['Height']
+        cw = self.WedgeParameters['Velocity']
+        phi = self.WedgeParameters['Angle']*np.pi/180
+        fs = self.SamplingFrequency
+
+        h = h + 0.5*p*(N-1)*np.sin(phi)
+
+        T = int(np.round(fs*2*(h/cw + Th/c)))
+
+        W = int(np.round(fs*0.25*Th/c))
+
+        A = self.PlaneWaveSweep(0, [-phi], (Elements,Elements), c)
+
+        b = np.argmax(np.abs(hilbert(np.real(A[0,T-W:T+W])))) + T - W
+
+        t1 = b/fs
+
+        T = int(np.round(fs*2*(h/cw + 2*Th/c)))
+
+        b = np.argmax(np.abs(hilbert(np.real(A[0,T-W:T+W])))) + T - W
+
+        t2 = b/fs
+
+        return 0.5*c*(t2-t1)
+
+    def EstimateWedgeParameters(self):
+
+        N = self.NumberOfElements
+        p = self.Pitch
+        h = self.WedgeParameters['Height']
+        cw = self.WedgeParameters['Velocity']
+        phi = self.WedgeParameters['Angle']*np.pi/180
+        fs = self.SamplingFrequency
+
+        from scipy.signal import hilbert
+
+        AScans = self.AScans[0]
+
+        A = np.array([AScans[n,n,:] for n in range(AScans.shape[0])])
+
+        B = np.zeros(A.shape[0])
+
+        for i in range(A.shape[0]):
+
+            eh = h + i*p*np.sin(phi)
+
+            t = int(np.round(fs*2*eh/cw))
+
+            w = int(np.round(fs*0.25*eh/cw))
+
+            b = np.argmax(np.abs(hilbert(np.real(A[i,t-w:t+w])))) + t - w
+
+            B[i] = (0.5*cw*b)/fs
+
+        Co = np.polyfit(np.array(range(A.shape[0])),B,1)
+
+        return {'Height':Co[1], 'Angle':np.arcsin(Co[0]/p)*180/np.pi}
+
+    def EstimateSweepBasedProbesOffset(self,c,Th,angle,Elements=None):
+
+        from scipy.signal import hilbert
+
+        N = self.NumberOfElements
+        p = self.Pitch
+        h = self.WedgeParameters['Height']
+        cw = self.WedgeParameters['Velocity']
+        phiw = self.WedgeParameters['Angle']*np.pi/180
+        fs = self.SamplingFrequency
+
+        if Elements is None:
+
+            Elements = (list(range(int(N/2))),list(range(int(N/2),N)))
+
+        SweepAngles = np.arange(-int(angle),int(angle),0.5)*np.pi/180
+
+        S = []
+
+        for i in range(len(Sweepangles)):
+
+            SA = self.PlaneWaveSweep(0,SweepAngles[i],Elements,cw)
+
+            phis = np.arcsin((cs/cw)*np.sin(phiw+SweepAngles[i]))
+
+            T = int(np.round(fs*(((h + 0.5*N*p*np.sin(phiw))/(cw*np.cos(phiw+SweepAngles[i]))) + (Th/(c*np.cos(phis))))))
+
+            W = int(np.round(0.15*T))
+
+            S.append(np.abs(hilbert(np.real(SA[T-W:T+W]))))
+
+        angle = SweepAngles[np.argmax(S)]
+
+        phir = np.arcsin((cs/cw)*np.sin(angle))
+
+        Offset = 2*(0.5*N*p*np.cos(phiw) + np.tan(phiw+angle)*(h+0.5*N*p*np.sin(phiw)) + Th*np.tan(phir))
+
+        return Offset
 
     def EstimateProbesOffset(self,c,Offset,Thickness):
 
@@ -221,20 +269,43 @@ class LinearCapture:
 
             return res.fun
 
+        def Error(d):
+
+            T = np.array([[int(np.round(Fs*delays(n,m,d))) for m in range(int(N/2))] for n in range(int(N/2))])
+            # T = np.array([[int(np.round(Fs*delays(Elements[0][n],Elements[1][m],d))) for m in range(int(mm))] for n in range(int(mm))])
+            # T = np.array([[int(np.round(Fs*delays(Elements[0][n],Elements[1][m],d))) for m in range(nn)] for n in range(nn)])
+
+            return np.sum(np.sum((MeasuredTimes - T)**2))
+            # return np.sum(np.sum((MT - T)**2))
+
         T = np.array([[int(np.round(Fs*delays(n,m,Offset))) for m in range(int(N/2))] for n in range(int(N/2))])
 
         W = np.array([[int(np.round(0.15*T[n,m])) for m in range(int(N/2))] for n in range(int(N/2))])
 
-        MeasuredTimes = np.array([[np.argmax(np.abs(hilbert(np.real(Scans[n,m+int(N/2),T[n,m]-W[n,m]:T[n,m]+W[n,m]]))))+T[n,m]-W[n,m] for m in range(int(N/2))] for n in range(int(N/2))])
+        # MeasuredTimes = np.array([[np.argmax(np.abs(hilbert(np.real(Scans[n,m+int(N/2),T[n,m]-W[n,m]:T[n,m]+W[n,m]]))))+T[n,m]-W[n,m] for m in range(int(N/2))] for n in range(int(N/2))])
+        MeasuredTimes = np.array([[np.argmax(np.abs(hilbert(np.real(Scans[n,m,T[n,m]-W[n,m]:T[n,m]+W[n,m]]))))+T[n,m]-W[n,m] for m in range(int(N/2))] for n in range(int(N/2))])
 
-        # return (T, MeasuredTimes)
-        def Error(d):
-
-            T = np.array([[int(np.round(Fs*delays(n,m,d))) for m in range(int(N/2))] for n in range(int(N/2))])
-
-            return np.sum(np.sum((MeasuredTimes - T)**2))
-
-        # res = minimize(Error,Offset,method='Nelder-Mead')
+        # error = np.abs(T-MeasuredTimes)
+        #
+        # mm = np.arange(16,32,2)
+        #
+        # X = []
+        #
+        # for i in range(len(mm)):
+        #
+        #     ind = np.argsort(error.flatten())[0:int(mm[i])]
+        #
+        #     Elements= np.unravel_index(np.array(ind),error.shape)
+        #
+        #     MT = [[MeasuredTimes[Elements[0][n],Elements[1][m]] for m in range(int(mm[i]))] for n in range(int(mm[i]))]
+        #
+        #     nn = int(mm[i])
+        #
+        #     res = minimize_scalar(Error,(Offset-5.,Offset+5.))
+        #
+        #     X.append(res.x)
+        #
+        # return X
 
         res = minimize_scalar(Error,(Offset-5.,Offset+5.))
 
@@ -510,24 +581,24 @@ class LinearCapture:
 
                 return res.fun
 
-                x = res.x
-                y = np.sqrt(R**2-x**2)
-                m = (Y-y)/(X-x)
-
-                C = np.zeros(3)
-                C[0] = 1+m**2
-                C[1] = -2*m**2*x+2*m*y
-                C[2] = y**2+m**2*x**2-2*m*y*x-(R-Th)**2
-
-                A = np.roots(C)
-
-                if (np.isreal(A[0])) or (np.isreal(A[1])):
-
-                    return np.nan
-
-                else:
-
-                    return res.fun
+                # x = res.x
+                # y = np.sqrt(R**2-x**2)
+                # m = (Y-y)/(X-x)
+                #
+                # C = np.zeros(3)
+                # C[0] = 1+m**2
+                # C[1] = -2*m**2*x+2*m*y
+                # C[2] = y**2+m**2*x**2-2*m*y*x-(R-Th)**2
+                #
+                # A = np.roots(C)
+                #
+                # if (np.isreal(A[0])) or (np.isreal(A[1])):
+                #
+                #     return np.nan
+                #
+                # else:
+                #
+                #     return res.fun
 
             else:
 
@@ -1133,23 +1204,11 @@ class LinearCapture:
 
         for i in range(len(self.AScans)):
 
-            self.AScans[i] = np.take(
-                np.take(
-                    self.AScans[i],
-                    Elements,
-                    axis=0),
-                Elements,
-                axis=1)
+            self.AScans[i] = np.take(np.take(self.AScans[i],Elements,axis=0),Elements,axis=1)
 
         if self.ProbeDelays is not None:
 
-            self.ProbeDelays = np.take(
-                np.take(
-                    self.ProbeDelays,
-                    Elements,
-                    axis=0),
-                Elements,
-                axis=1)
+            self.ProbeDelays = np.take(np.take(self.ProbeDelays,Elements,axis=0),Elements,axis=1)
 
         self.NumberOfElements = len(Elements)
 
