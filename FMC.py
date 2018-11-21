@@ -1014,12 +1014,12 @@ class LinearCapture:
 
         def PlaneWaveFocus(angles):
 
-            T = np.meshgrid(f, drc * np.sin(angles[1]) / c)
+            T = np.meshgrid(f, drc * np.sin(np.deg2rad(angles[1])) / c)
 
             XX = np.sum(X * np.exp(-2j * np.pi *
                                    T[0] * T[1]), axis=1, keepdims=False)
 
-            T = np.meshgrid(f, dtr * np.sin(angles[0]) / c)
+            T = np.meshgrid(f, dtr * np.sin(np.deg2rad(angles[0])) / c)
 
             XX = np.sum(XX * np.exp(-2j * np.pi *
                                     T[0] * T[1]), axis=0, keepdims=False)

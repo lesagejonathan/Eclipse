@@ -8,7 +8,6 @@ import time
 import threading
 
 def ClosestIndex(x,val):
-    from numpy import array
 
     return abs(array(x)-val).argmin()
 
@@ -392,7 +391,8 @@ class PeakNDT:
 
         ReadLength = int(self.ScanLength*(int(self.PulserSettings['BitDepth'])/8) + 8)
 
-        self.SetPRF(1.5e6/(Gate[1]-Gate[0]))
+
+        self.SetPRF(1.1e6/(Gate[1]-Gate[0]))
 
         for tr in range(len(Elements[0])):
 
@@ -730,7 +730,7 @@ class PeakNDT:
 
                 self.AScans.append(A)
 
-        elif (self.CaptureSettings['CaptureType'] == 'FMC')&(self.EncodedScan==True):
+        elif (self.CaptureSettings['CaptureType'] == 'FMC')&(self.EncodedScan):
 
             Ntr = len(self.CaptureSettings['Elements'][0])
             Nrc = len(self.CaptureSettings['Elements'][1])
@@ -788,7 +788,13 @@ class PeakNDT:
                 indstart = s*Nt + 8
                 indstop = indstart + Nt - 8
 
-                self.AScans.append(BytesToFloat(self.Buffer[indstart:indstop],self.PulserSettings['BitDepth']))
+                self.AScans.append(BytesToData(self.Buffer[indstart:indstop],self.PulserSettings['BitDepth']))
+
+        # self.ScanCount = 0
+
+        # print(len(self.Buffer))
+        #
+        # self.Buffer = bytearray()
 
     def StartBuffering(self):
 
@@ -811,13 +817,12 @@ class PeakNDT:
     def StopBuffering(self):
 
         try:
-
             self.StopCapture.set()
             del(self.BufferThread)
 
-
         except:
             pass
+
 
     def ClearScans(self):
 
@@ -832,7 +837,7 @@ class PeakNDT:
         self.AScans = []
         self.ScanCount = 0
 
-        self.StopBuffering()
+        # self.StopBuffering()
 
         # self.Socket.send(('STX 1\r').encode())
         # ReadExactly(self.Socket, 8)

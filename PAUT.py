@@ -43,6 +43,8 @@ class Sweep:
         self.WaveSpeed = c
         self.Pitch = pitch
 
+        self.WedgeParameters = wedgeparams
+
         if depthoffsets is None:
 
             self.DepthOffsets = [np.zeros(len(self.Angles[i])) for i in range(len(self.Angles))]
@@ -105,7 +107,7 @@ class Sweep:
             self.DepthOffsets[i] = np.zeros(newangles[i].shape)
 
 
-    def GetWedgeIndexOffsets(self, elements, wedgeangle, h, wedgeoffset=0., pitch=0.6, cw=2.33):
+    def GetWedgeIndexOffsets(self, wedgeoffset=0.):
 
         """ Allows index offsets to be estimated from wedge parameters
         (h - height of first element, wedgeangle - angle of wedge,
@@ -116,7 +118,15 @@ class Sweep:
 
         ioff = []
 
+        pitch = self.Pitch
+        cw = self.WedgeParameters['Velocity']
+        h = self.WedgeParameters['Height']
+        wedgeangle = self.WedgeParameters['Angle']
+
+
         wa = np.deg2rad(wedgeangle)
+
+        elements = self.Elements
 
 
         for i in range(len(self.Angles)):
@@ -210,7 +220,11 @@ class Sweep:
 
         r = np.linspace(0.,c*a.shape[1]/(2*self.SamplingFrequency), a.shape[1]).reshape(1,-1)
 
-        ang = self.Angles.reshape(-1,1)
+
+
+        # ang = self.Angles.reshape(-1,1)
+
+        ang = self.Angles[0].reshape(-1,1)
 
         if self.IndexOffsets is None:
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-def ReadUltraVisionData(flname, ngroups=None, datatype=np.float):
+def ReadUltraVisionData(flname, ngroups=1, datatype=np.float):
 
 
     """
@@ -43,12 +43,14 @@ def ReadUltraVisionData(flname, ngroups=None, datatype=np.float):
 
         Data.append([list(np.fromstring(DDD, sep=' ', dtype=datatype)) for DDD in DD])
 
-
-
     Data = np.swapaxes(np.array(Data),1,2)
 
+    Data = Data.reshape((ngroups,int(B/ngroups),Data.shape[-2],Data.shape[-1]))
 
-    return Data
+    Gr = [Data[n,:,:,:] for n in range(ngroups)]
+
+
+    return Gr
 
 def ReadTomoviewData(flname, datatype=np.float):
 

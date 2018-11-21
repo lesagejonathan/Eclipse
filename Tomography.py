@@ -2,6 +2,58 @@ import numpy as np
 import FMC
 # import misc
 import copy
+import matplotlib.pylab as plt
+
+def SolveCimmino(A,b,restol=1e-5,drestol=1e-4,niter=1000,constrainpositive=True):
+
+    from numpy.linalg import norm
+
+    m,n = A.shape
+
+    r = np.array([A[m,:]@A[m,:].transpose() for m in range(m)]).flatten()
+
+    M = np.diag(m*r)
+    Minv = np.diag(m*1./r)
+    AT = A.transpose()
+
+    lmbd = 0.99*2/(norm(AT@Minv@A,2))
+
+
+    x = np.zeros((n,1))
+
+    res = 0.
+
+    k = 0
+
+    converged = False
+
+    while k<=niter:
+
+        x = x + lmbd*(AT@Minv@(b-(A@x)))
+
+        if constrainpositive:
+
+            x[x<0] = 0.
+
+        rres = np.abs(norm(A@x - b,2))
+
+        dres = np.abs(rres - res)
+
+        if (rres<restol) or (dres<drestol):
+
+            converged = True
+
+            break
+
+        else:
+
+            res = rres
+
+            k += 1
+
+
+
+    return x,converged
 
 
 def GetSpectralRange(X,Y,dB=-6):
@@ -27,85 +79,6 @@ def ToHalfMatrix(a):
 
     return a
 
-# def BilinearInterp(x,y,xi,yi,fi):
-#
-#     from numpy.linalg import solve
-#
-#
-#     def Interp(x,y):
-#
-#         indx = np.argmin(np.abs(x-xi))
-#         indy = np.argmin(np.abs(y-yi))
-#
-#         if indx == 0:
-#
-#             ix1 = indx
-#             ix2 = indx+1
-#
-#         elif indx == len(xi)-1:
-#
-#             indx1 = indx-1
-#             indx2 = indx
-#
-#         else:
-#
-#             Xim1 = x[indx-1]
-#             Xi = x[indx]
-#             Xip1 = x[indx + 1]
-#
-#             if (0.5*(Xim1+Xi))<=(0.5*(Xi+Xip1)):
-#
-#                 indx1 = indx
-#                 indx2 = indx + 1
-#
-#             else:
-#
-#                 indx1 = indx - 1
-#                 indx2 = indx
-#
-#
-#         if indy == 0:
-#
-#             indy1 = indy
-#             indy2 = indy+1
-#
-#         elif indy == len(yi)-1:
-#
-#             indy1 = indy-1
-#             indy2 = indy
-#
-#         else:
-#
-#             Yim1 = y[indy-1]
-#             Yi = y[indy]
-#             Yip1 = y[indy + 1]
-#
-#             if (0.5*(Yim1+Yi))<=(0.5*(Yi+Yip1)):
-#
-#                 indy1 = indy
-#                 indy2 = indy+1
-#
-#             else:
-#
-#                 indy1 = indy-1
-#                 indy2 = indy
-#
-#         x1 = xi[indx1]
-#         x2 = xi[indx2]
-#         y1 = yi[indy1]
-#         y2 = yi[indy2]
-#
-#         f = np.array([fi[indx1,indy1],fi[indx1,indy2],fi[indx2,indy1],fi[indx2,indy2]]).reshape(-1,1)
-#
-#         A = np.array([[1.,x1,y1,x1*y1],[1.,x1,y2,x1*y2],[1.,x2,y1,x2*y1],[1.,x2,y2,x2*y2]])
-#
-#         a = solve(A,f)
-#
-#         return a[0] + a[1]*x + a[2]*y + a[3]*x*y
-#
-#     I = np.vectorize(Interp)
-#
-#     return I(x,y)
 
 
 
@@ -148,19 +121,6 @@ def BilinearInterp(x,y,xi,yi,fi):
             f10 = fi[ind+1]
 
 
-
-
-
-
-            # r = np.sqrt((x-xi)**2 + (y-yi)**2)
-            #
-            # ind = np.argsort(r)[0:3]
-
-            # x0,y0 = xi[ind[0]],yi[ind[0]]
-            # x1,y1 = xi[ind[1]],yi[ind[1]]
-            # x2,y2 = xi[ind[2]],yi[ind[2]]
-            # x3,y3 = xi[ind[3]],yi[ind[3]]
-
             f = np.array([f00,f01,f10,f11]).reshape(-1,1)
 
             A = np.array([[1.,x0,y0,x0*y0],[1.,x0,y1,x0*y1],[1.,x1,y0,x1*y0],[1.,x1,y1,x1*y1]])
@@ -197,7 +157,14 @@ def BilinearInterpCoeffs(x,y,xi,yi):
     indx = int(np.floor((x-xmin)/dx))
     indy = int(np.floor((y-ymin)/dy))
 
-    # if (indx>=0)&(indx<Nx-1)&(indy>=0)&(indy<Ny-1):
+    if (indx==Nx-1):
+
+        indx = indx - 1
+
+    if (indy==Ny-1):
+
+        indy = indy - 1
+
 
 
     x0 = xi[indx]
@@ -210,24 +177,10 @@ def BilinearInterpCoeffs(x,y,xi,yi):
 
     ind = np.array([ind, ind+Nx, ind+Nx+1, ind+1])
 
-    # f00 = fi[ind]
-    # f01 = fi[ind+Nx]
-    # f11 = fi[ind+Nx+1]
-    # f10 = fi[ind+1]
-    #
-    # f = np.array([f00,f01,f10,f11]).reshape(-1,1)
 
     A = np.array([[1.,x0,y0,x0*y0],[1.,x0,y1,x0*y1],[1.,x1,y0,x1*y0],[1.,x1,y1,x1*y1]])
 
     coeffs = np.dot(inv(A).transpose(),np.array([1.,x,y,x*y]).reshape(-1,1)).flatten()
-
-
-    # else:
-    #
-    #     I = 0.
-    #
-    #
-    #     return I
 
 
     return ind, coeffs
@@ -254,6 +207,8 @@ class FMCCapture:
 
     def GetPathParameters(self,pathkey,params):
 
+        from scipy.optimize import minimize_scalar
+
         """ Sets PathParameters attribute with dictionary having intersections with geometry, delays between element pairs and
         path lengths inside inspection geometry. Used for computing projection matrix """
 
@@ -267,11 +222,11 @@ class FMCCapture:
 
         if pathkey== 'Contact':
 
-            xymn = [[((x[m],0.),(0.5*(x[n]-x[m]),params['Thickness']),(x[n],0.)) for m in range(N)] for n in range(N)]
+            xymn = [[((x[m],0.),(0.5*(x[n]+x[m]),params['Thickness']),(x[n],0.)) for n in range(N)] for m in range(N)]
 
-            lmn = [[ (np.sqrt((xymn[m][n][1][0] - xymn[m][n][0][0])**2 + (xymn[m][n][1][1] - xymn[m][n][1][0])**2),np.sqrt((xymn[m][n][2][0] - xymn[m][n][1][0])**2 + (xymn[m][n][2][1] - xymn[m][n][1][0])**2)) for m in range(N)] for n in range(N)]
+            lmn = [[ (np.sqrt((xymn[m][n][1][0] - xymn[m][n][0][0])**2 + (xymn[m][n][1][1] - xymn[m][n][0][1])**2), np.sqrt((xymn[m][n][2][0] - xymn[m][n][1][0])**2 + (xymn[m][n][2][1] - xymn[m][n][1][1])**2)) for n in range(N)] for m in range(N)]
 
-            self.PathParameters[pathkey]['Delays'] = [[lmn[m][n][0]/params['Velocity'] + lmn[m][n][1]/params['Velocity'] for m in range(N)] for n in range(N)]
+            self.PathParameters[pathkey]['Delays'] = [[(lmn[m][n][0] + lmn[m][n][1])/params['Velocity'] for n in range(N)] for m in range(N)]
 
             self.PathParameters[pathkey]['Lengths'] = lmn
 
@@ -280,9 +235,59 @@ class FMCCapture:
             self.PathParameters[pathkey]['Thickness'] = params['Thickness']
 
 
+        elif pathkey == 'DelayLine':
+
+            h = params['Thickness'][0]
+            d = params['Thickness'][1]
+            cw = params['Velocity'][0]
+            cs = params['Velocity'][1]
+
+            def Delay(x,m,n):
+
+                x2 = x[m]+(x[m]-x[n])/2.
+
+                return np.sqrt((x-x[n])**2 + h**2)/cw + np.sqrt((x2-x)**2 + d**2)/cs
+
+            self.PathParameters[pathkey]['Delays'] = []
+
+            self.PathParameters[pathkey]['Lengths'] = []
+
+            self.PathParameters[pathkey]['Intersections'] = []
 
 
-    def GetProjectionMatrix(self,pathkey,ds=0.2,svdcutoff=None):
+            for m in range(N):
+
+                dlsn = []
+                ln = []
+
+                xyn = []
+
+
+                for n in range(N):
+
+                    x2 = x[m]+(x[n]-x[m])*0.5
+
+                    r = minimize_scalar(Delay,(x[m],x2),args=(m,n))
+
+                    dlsn.append(r.fun*2)
+
+                    x1 = r.x
+
+                    x3 = x2 + x1
+
+                    xyn.append(((x1,0.),(x2,d),(x3,0.)))
+
+                    ln.append((np.sqrt((x2-x1)**2 + d**2), np.sqrt((x2-x1)**2 + d**2)))
+
+                self.PathParameters[pathkey]['Lengths'].append(ln)
+
+                self.PathParameters[pathkey]['Delays'].append(dlsn)
+
+                self.PathParameters[pathkey]['Intersections'].append(xyn)
+
+
+
+    def GetProjectionMatrix(self,pathkey,ds=0.05,svdcutoff=None):
 
         """
             Computes projection matrix if svdcutoff is not None GetProjectionMatrixInverse is called with svdcutoff value
@@ -292,7 +297,7 @@ class FMCCapture:
 
         N = self.Capture.NumberOfElements
 
-        M = int(np.round((1+N)*N/2))
+        M = int(len(self.Grid['x'])*len(self.Grid['y']))
 
 
         B = []
@@ -301,7 +306,7 @@ class FMCCapture:
 
             for n in range(m,N):
 
-                BB = np.zeros((M,1))
+                BB = np.zeros(M)
 
                 lab = self.PathParameters[pathkey]['Lengths'][m][n][0]
 
@@ -335,14 +340,8 @@ class FMCCapture:
                         xk = xb + (sk-lab)*(xc-xb)/lbc
                         yk = yb + (sk-lab)*(yc-yb)/lbc
 
-
-                    # print(xk)
-                    # print(yk)
-
                     ind,c = BilinearInterpCoeffs(xk,yk,self.Grid['x'],self.Grid['y'])
 
-                    # print(ind)
-                    # print(c)
 
                     for i in range(4):
 
@@ -357,7 +356,6 @@ class FMCCapture:
         if svdcutoff is not None:
 
             self.GetProjectionMatrixInverse(pathkey,svdcutoff)
-
 
 
 
@@ -380,7 +378,8 @@ class FMCCapture:
         self.ProjectionMatrixInverse[pathkey] = pinv(B,ev[ind])
 
 
-    def SetGrid(self,pathkey):
+
+    def SetGrid(self,pathkey,griddims=None):
 
         if pathkey=='Contact':
 
@@ -389,9 +388,19 @@ class FMCCapture:
 
             M = int(np.round((1+N)*N/2))
 
-            Ny = int(np.round(M/N))
+            if griddims is None:
 
-            x = np.linspace(-p*(N-1)*0.5,p*(N-1)*0.5,N)
+                Nx = N
+
+                M = int(np.round((1+N)*N/2))
+                Ny = int(np.round(M/N))
+
+            else:
+
+                Nx = griddims[0]
+                Ny = griddims[1]
+
+            x = np.linspace(-p*(N-1)*0.5,p*(N-1)*0.5,Nx)
             y = np.linspace(0.,self.PathParameters[pathkey]['Thickness'],Ny)
 
             # xy = np.meshgrid(x,y)
@@ -401,7 +410,7 @@ class FMCCapture:
             self.Grid = {'x':x,'y':y}
 
 
-    def GetAttenuationImage(self, pathkey, ScanIndex, RefIndex, fpower, resolution=0.1, fband=None, windowparams=(50, 0.1), fftpad = 4):
+    def GetAttenuationImage(self, pathkey, ScanIndex, RefIndex, fpower, resolution=0.1, fband=None, windowparams=(50, 0.1), fftpad = 4, posneg=None):
 
 
         from numpy.fft import ifft,fftshift,rfft,ifftshift
@@ -437,6 +446,8 @@ class FMCCapture:
 
                 ind = int(np.round(fs*self.PathParameters[pathkey]['Delays'][m][n]))
 
+
+
                 Aref = rfft(W*aref[m,n,ind-windowparams[0]:ind+windowparams[0]], NFFT)
 
                 A = rfft(W*a[m,n,ind-windowparams[0]:ind+windowparams[0]], NFFT)
@@ -466,9 +477,116 @@ class FMCCapture:
         Gexp = np.array(Gexp).reshape(-1,1)
         Gavg = np.array(Gavg).reshape(-1,1)
 
+        np.nan_to_num(Gexp,False)
+        np.nan_to_num(Gavg,False)
 
-        Iexp = np.dot(self.ProjectionMatrixInverse[pathkey],Gexp)
-        Iavg = np.dot(self.ProjectionMatrixInverse[pathkey],Gavg)
+        # Iexp = np.dot(self.ProjectionMatrixInverse[pathkey],Gexp)
+        # Iavg = np.dot(self.ProjectionMatrixInverse[pathkey],Gavg)
+
+        Iexp,convexp = SolveCimmino(self.ProjectionMatrix[pathkey],Gexp,constrainpositive=True)
+        Iavg,convavg = SolveCimmino(self.ProjectionMatrix[pathkey],Gavg,constrainpositive=True)
+
+
+        xmin = np.amin(self.Grid['x'])
+        xmax = np.amax(self.Grid['x'])
+
+        ymin = np.amin(self.Grid['y'])
+        ymax = np.amax(self.Grid['y'])
+
+        x,y = np.meshgrid(np.linspace(xmin,xmax,int(np.round((xmax-xmin)/resolution))), np.linspace(ymin,ymax,int(np.round((ymax-ymin)/resolution))))
+
+
+
+        if posneg=='Positive':
+
+            Iexp[Iexp<0.] = 0.
+            Iavg[Iavg<0.] = 0.
+
+        elif posneg=='Negative':
+
+            Iexp[Iexp>0.] = 0.
+            Iavg[Iavg>0.] = 0.
+
+
+
+        Iexp = BilinearInterp(x,y,self.Grid['x'],self.Grid['y'],Iexp).reshape(x.shape)
+
+        Iavg = BilinearInterp(x,y,self.Grid['x'],self.Grid['y'],Iavg).reshape(y.shape)
+
+
+
+        return Iavg,Iexp,convavg,convexp
+
+
+    def GetAttenuationRateImage(self, pathkey, ScanIndex, RefSignal, fpower, resolution=0.1, fband=None, windowparams=(50, 0.1), fftpad = 4, solverparams=(1e-6,1e-6,1000,True)):
+
+
+        from numpy.fft import ifft,fftshift,rfft,ifftshift
+        from scipy.signal import tukey
+        from scipy.ndimage import zoom
+        from matplotlib.pyplot import plot,show
+        from scipy.sparse.linalg import lsqr
+        # from numpy.linalg import dot
+
+
+        fs = self.Capture.SamplingFrequency
+
+        Gexp = []
+
+
+
+        W = tukey(int(2*windowparams[0]),windowparams[1])
+
+        NFFT = int(fftpad*2*windowparams[0])
+
+
+        a = self.Capture.AScans[ScanIndex]
+
+        f = np.linspace(0., fs/2, np.floor(NFFT/2) + 1)
+        N = self.Capture.NumberOfElements
+
+        Aref = rfft(W*RefSignal, NFFT)
+
+
+        for m in range(N):
+
+            for n in range(m,N):
+
+
+                ind = int(np.round(fs*self.PathParameters[pathkey]['Delays'][m][n]))
+
+
+                A = rfft(W*a[m,n,ind-windowparams[0]:ind+windowparams[0]], NFFT)
+
+
+                if fband is None:
+
+                    indf = GetSpectralRange(Aref,Aref)
+
+                else:
+
+                    indf = np.where((f>=fband[0])&(f<=fband[1]))[0]
+
+
+                AAref = Aref[indf]
+                A = A[indf]
+
+                Arefmax = np.amax(abs(AAref))
+
+                v = FitPowerLaw(f[indf],-np.log(np.abs(A/AAref)),fpower)
+
+                Gexp.append(v[0])
+
+
+
+        Gexp = np.array(Gexp).reshape(-1,1)
+
+        np.nan_to_num(Gexp,False)
+
+        # Iexp = np.dot(self.ProjectionMatrixInverse[pathkey],Gexp)
+        # Iavg = np.dot(self.ProjectionMatrixInverse[pathkey],Gavg)
+
+        Iexp,convexp = SolveCimmino(self.ProjectionMatrix[pathkey],Gexp,solverparams[0],solverparams[1],solverparams[2],solverparams[3])
 
 
         xmin = np.amin(self.Grid['x'])
@@ -481,52 +599,8 @@ class FMCCapture:
 
         Iexp = BilinearInterp(x,y,self.Grid['x'],self.Grid['y'],Iexp).reshape(x.shape)
 
-        Iavg = BilinearInterp(x,y,self.Grid['x'],self.Grid['y'],Iavg).reshape(y.shape)
 
-
-        return Iavg,Iexp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return Iexp,convexp,Gexp
 
 
 
