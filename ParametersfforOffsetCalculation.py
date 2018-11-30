@@ -47,6 +47,7 @@ def EstimateProbesOffset(self,c,Offset,Thickness):
 
     from scipy.signal import hilbert
     from scipy.optimize import minimize_scalar,minimize
+    from scipy.signal import argrelextrema
 
     p = self.Pitch
     N = self.NumberOfElements
@@ -86,21 +87,43 @@ def EstimateProbesOffset(self,c,Offset,Thickness):
     def Error(d):
 
         T = np.array([[int(np.round(Fs*delays(n,m,d))) for m in range(int(N/2))] for n in range(int(N/2))])
-        # T = np.array([[int(np.round(Fs*delays(Elements[0][n],Elements[1][m],d))) for m in range(int(mm))] for n in range(int(mm))])
-        # T = np.array([[int(np.round(Fs*delays(Elements[0][n],Elements[1][m],d))) for m in range(nn)] for n in range(nn)])
 
-        return np.sum(np.sum((MeasuredTimes - T)**2))
-        # return np.sum(np.sum((MT - T)**2))
+        return np.nansum((MeasuredTimes - T)**2)
 
     T = np.array([[int(np.round(Fs*delays(n,m,Offset))) for m in range(int(N/2))] for n in range(int(N/2))])
 
     W = np.array([[int(np.round(0.15*T[n,m])) for m in range(int(N/2))] for n in range(int(N/2))])
 
-    # MeasuredTimes = np.array([[np.argmax(np.abs(hilbert(np.real(Scans[n,m+int(N/2),T[n,m]-W[n,m]:T[n,m]+W[n,m]]))))+T[n,m]-W[n,m] for m in range(int(N/2))] for n in range(int(N/2))])
-    MeasuredTimes = np.array([[np.argmax(np.abs(hilbert(np.real(Scans[n,m,T[n,m]-W[n,m]:T[n,m]+W[n,m]]))))+T[n,m]-W[n,m] for m in range(int(N/2))] for n in range(int(N/2))])
+    # MeasuredTimes = np.array([[np.argmax(np.abs(hilbert(np.real(Scans[n,m,T[n,m]-W[n,m]:T[n,m]+W[n,m]]))))+T[n,m]-W[n,m] for m in range(int(N/2))] for n in range(int(N/2))])
+    MeasuredTimes = np.zeros((int(N/2),int(N/2)))
+
     for n in range(len(int(N/2))):
+
         for m in range(len(int(N/2))):
+
             A = np.abs(hilbert(np.real(Scans[n,m,T[n,m]-W[n,m]:T[n,m]+W[n,m]])))
+
+            ind = argrelextrema(A,greater,order=4)
+
+            if (len(ind[0])<1):
+                MeasuredTimes[n,m] = np.nan
+
+            else if ((len(ind[0])<2) & (len(ind[0])>0)):
+
+                MeasuredTimes[n,m] = ind[0] + T[n,m] - W[n,m]
+
+            else:
+
+                Ind = np.argmin(np.abs(W[n,m] - ind[0]))
+                MeasuredTimes[n,m] = ind[0][Ind] + T[n,m] - W[n,m]
+
+
+
+
+
+
+
+
 
 
 
