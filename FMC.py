@@ -223,7 +223,7 @@ class LinearCapture:
 
         T = np.array([[int(np.round(Fs*delays(n,m,Offset))) for m in range(int(N/2))] for n in range(int(N/2))])
 
-        W = np.array([[int(np.round(0.15*T[n,m])) for m in range(int(N/2))] for n in range(int(N/2))])
+        W = np.array([[int(np.round(0.1*T[n,m])) for m in range(int(N/2))] for n in range(int(N/2))])
 
         MeasuredTimes = np.array([[np.argmax(np.abs(hilbert(np.real(Scans[n,m+int(N/2),T[n,m]-W[n,m]:T[n,m]+W[n,m]]))))+T[n,m]-W[n,m] for m in range(int(N/2))] for n in range(int(N/2))])
 
@@ -335,7 +335,7 @@ class LinearCapture:
 
         self.Delays = (delays,delays)
 
-    def GetWedgeBackwallFrontwallDelays(self, c, Th, Offset):
+    # def GetWedgeBackwallFrontwallDelays(self, c, Th, Offset):
 
 
 
